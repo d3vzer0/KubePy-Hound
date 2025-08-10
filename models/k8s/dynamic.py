@@ -42,7 +42,6 @@ class DynamicResource(BaseModel):
 
 class ExtendedProperties(NodeProperties):
     model_config = ConfigDict(extra='allow')
-    kind: str
     namespace: str
 
 
@@ -63,9 +62,9 @@ class DynamicNode(Node):
     def _role_edge(self):
         role_edges = []
         for permission in self.source_role_permissions:
+            end_path = EdgePath(value=self.id, match_by='id')
             target_id = self.source_role_uid
-            start_path = EdgePath(value=self.id, match_by='id')
-            end_path = EdgePath(value=target_id, match_by='id')
+            start_path = EdgePath(value=target_id, match_by='id')
             mapped_permission = VERB_TO_PERMISSION[permission]
             edge = Edge(kind=mapped_permission, start=start_path, end=end_path)
             role_edges.append(edge)
