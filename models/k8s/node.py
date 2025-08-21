@@ -23,7 +23,7 @@ class NodeOutput(GraphNode):
         target_id = lookups.groups["system:authenticated"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MEMBER_OF', start=start_path, end=end_path)
+        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
         return edge
 
     @property
@@ -31,14 +31,14 @@ class NodeOutput(GraphNode):
         target_id = lookups.groups["system:nodes"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MEMBER_OF', start=start_path, end=end_path)
+        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
         return edge
 
     @property
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
-        edge = Edge(kind='BELONGS_TO', start=start_path, end=end_path)
+        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
         return edge
 
     @property

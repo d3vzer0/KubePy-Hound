@@ -21,7 +21,7 @@ class NamespaceNode(Node):
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
-        edge = Edge(kind='BELONGS_TO', start=start_path, end=end_path)
+        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
         return edge
 
     @property

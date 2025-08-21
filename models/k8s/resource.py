@@ -37,7 +37,7 @@ class ResourceNode(Node):
         if self.properties.api_group_uid:
             start_path = EdgePath(value=self.id, match_by='id')
             end_path = EdgePath(value=self.properties.api_group_uid, match_by='id')
-            edge = Edge(kind='IN_RESOURCE_GROUP', start=start_path, end=end_path)
+            edge = Edge(kind='InResourceGroup', start=start_path, end=end_path)
             return edge
         else:
             return None

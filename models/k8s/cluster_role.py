@@ -17,7 +17,11 @@ class Verbs(str, Enum):
     delete = "delete"
     deletecollection = "deletecollection"
     proxy = "proxy"
+    impersonate = "impersonate"
     wildcard = "*"
+    approve = "approve"
+    sign = "sign"
+    escalate = "escalate"
 
     def __str__(self):
         return self.value
@@ -33,25 +37,24 @@ VERB_TO_PERMISSION = {
     "delete": "CAN_DELETE",
     "deletecollection": "CAN_DELETE_COLLECTION",
     "proxy": "CAN_PROXY",
+    "impersonate": "CAN_IMPERSONATE",
+    "approve": "CAN_APPROVE",
+    "sign": "CAN_SIGN",
+    "escalate": "CAN_ESCALATE",
     "*": "CAN_ALL",
 }
-
-
-class Spec(BaseModel):
-    node_name: str
 
 
 class Metadata(BaseModel):
     name: str
     uid: str
-    namespace: str
     creation_timestamp: datetime
     labels: dict | None = None
 
 
 class Rule(BaseModel):
-    api_groups: list[str] = ["__core__"]
-    resources: list[str]
+    api_groups: Optional[list[str]] = ["__core__"]
+    resources: Optional[list[str]] = []
     verbs: list[Verbs]
     resource_names: Optional[list[str]] = None
 
@@ -62,11 +65,11 @@ class Rule(BaseModel):
         return v
 
 
-class Role(BaseModel):
+class ClusterRole(BaseModel):
     metadata: Metadata
-    rules: Optional[list[Rule]] = []
+    rules: list[Rule] = []
 
-    @field_validator('rules')
+    @field_validator('rules', mode='before')
     def validate_rules(cls, v):
         if not v:
             return []
@@ -74,7 +77,6 @@ class Role(BaseModel):
 
 
 class ExtendedProperties(NodeProperties):
-    namespace: str
     rules: list[Rule] = Field(exclude=True)
 
     @field_validator('rules')
@@ -84,8 +86,15 @@ class ExtendedProperties(NodeProperties):
         return v
 
 
-class RoleNode(Node):
+class ClusterRoleNode(Node):
     properties: ExtendedProperties
+
+    @property
+    def _cluster_edge(self):
+        start_path = EdgePath(value=self.id, match_by='id')
+        end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
+        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        return edge
 
     def _matching_verbs(self, verbs: list) -> list:
         matched = []
@@ -103,13 +112,6 @@ class RoleNode(Node):
             matched.extend(matched_keys)
         return matched
 
-    @property
-    def _namespace_edge(self):
-        target_id = lookups.namespaces[self.properties.namespace]
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
-        return edge
 
     def _rule_edge(self, rule: Rule):
         targets = []
@@ -123,7 +125,6 @@ class RoleNode(Node):
             else:
                 matched_resources = self._matching_resources(group_resources, rule.resources)
                 for resource in matched_resources:
-                    print(resource)
                     target_id = group_resources.get(resource)
                     end_path = EdgePath(value=target_id, match_by='id')
                     matched_verbs = self._matching_verbs(rule.verbs)
@@ -138,18 +139,19 @@ class RoleNode(Node):
         edges = []
         for rule in self.properties.rules:
             edges.extend(self._rule_edge(rule))
+
         return edges
 
     @property
     def edges(self):
-        return [self._namespace_edge, *self._rules_edge]
+        return [self._cluster_edge, *self._rules_edge]
 
     @classmethod
-    def from_input(cls, **kwargs) -> "RoleNode":
-        model = Role(**kwargs)
-        properties = ExtendedProperties(rules=model.rules, name=model.metadata.name, displayname=model.metadata.name, namespace=model.metadata.namespace)
-        return cls(id=model.metadata.uid, kinds=["KubeScopedRole", "KubeRole"], properties=properties)
+    def from_input(cls, **kwargs) -> "ClusterRoleNode":
+        model = ClusterRole(**kwargs)
+        properties = ExtendedProperties(name=model.metadata.name, displayname=model.metadata.name, rules=model.rules)
+        return cls(id=model.metadata.uid, kinds=["KubeClusterRole", "KubeRole"] , properties=properties)
 
 
-# class RoleGraphEntries(GraphEntries):
-#     nodes: list[RoleNode] = []
+# class ClusterRoleGraphEntries(GraphEntries):
+#     nodes: list[ClusterRoleNode] = []

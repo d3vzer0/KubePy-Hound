@@ -66,7 +66,7 @@ class PodNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BELONGS_TO', start=start_path, end=end_path)
+        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -74,7 +74,7 @@ class PodNode(Node):
         target_id = lookups.nodes[self.properties.node_name]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='RUNS_ON', start=start_path, end=end_path)
+        edge = Edge(kind='RunsOn', start=start_path, end=end_path)
         return edge
 
     @property
@@ -82,7 +82,7 @@ class PodNode(Node):
         target_id = lookups.service_accounts[self.properties.namespace][self.properties.service_account_name]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='RUNS_AS', start=start_path, end=end_path)
+        edge = Edge(kind='RunsOn', start=start_path, end=end_path)
         return edge
 
     @property

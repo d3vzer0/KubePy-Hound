@@ -61,7 +61,7 @@ class RoleBindingNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BELONGS_TO', start=start_path, end=end_path)
+        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -69,7 +69,7 @@ class RoleBindingNode(Node):
         target_id = lookups.roles[self.properties.namespace][self.properties.role_ref]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='REFERENCES_ROLE', start=start_path, end=end_path)
+        edge = Edge(kind='ReferencesRole', start=start_path, end=end_path)
         return edge
 
     @property

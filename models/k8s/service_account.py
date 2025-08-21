@@ -52,7 +52,7 @@ class ServiceAccountNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BELONGS_TO', start=start_path, end=end_path)
+        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -60,7 +60,7 @@ class ServiceAccountNode(Node):
         target_id = lookups.groups["system:authenticated"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MEMBER_OF', start=start_path, end=end_path)
+        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
         return edge
 
     @property
@@ -68,7 +68,7 @@ class ServiceAccountNode(Node):
         target_id = lookups.groups["system:serviceaccounts"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MEMBER_OF', start=start_path, end=end_path)
+        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
         return edge
 
     @property
