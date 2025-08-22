@@ -28,20 +28,20 @@ class Verbs(str, Enum):
 
 
 VERB_TO_PERMISSION = {
-    "get": "CAN_GET",
-    "list": "CAN_LIST",
-    "watch": "CAN_WATCH",
-    "create": "CAN_CREATE",
-    "update": "CAN_UPDATE",
-    "patch": "CAN_PATCH",
-    "delete": "CAN_DELETE",
-    "deletecollection": "CAN_DELETE_COLLECTION",
-    "proxy": "CAN_PROXY",
-    "impersonate": "CAN_IMPERSONATE",
-    "approve": "CAN_APPROVE",
-    "sign": "CAN_SIGN",
-    "escalate": "CAN_ESCALATE",
-    "*": "CAN_ALL",
+    "get": "K8sCanGet",
+    "list": "K8sCanList",
+    "watch": "K8sCanWatch",
+    "create": "K8sCanCreate",
+    "update": "K8sCanUpdate",
+    "patch": "K8sCanPatch",
+    "delete": "K8sCanDelete",
+    "deletecollection": "K8sCanDeleteCollection",
+    "proxy": "K8sCanProxy",
+    "impersonate": "K8sCanImpersonate",
+    "approve": "K8sCanApprove",
+    "sign": "K8sCanSign",
+    "escalate": "K8sCanEscalate",
+    "*": "K8sCanAll",
 }
 
 
@@ -93,7 +93,7 @@ class ClusterRoleNode(Node):
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     def _matching_verbs(self, verbs: list) -> list:
@@ -150,7 +150,7 @@ class ClusterRoleNode(Node):
     def from_input(cls, **kwargs) -> "ClusterRoleNode":
         model = ClusterRole(**kwargs)
         properties = ExtendedProperties(name=model.metadata.name, displayname=model.metadata.name, rules=model.rules)
-        return cls(id=model.metadata.uid, kinds=["KubeClusterRole", "KubeRole"] , properties=properties)
+        return cls(id=model.metadata.uid, kinds=["K8sClusterRole", "K8sRole"], properties=properties)
 
 
 # class ClusterRoleGraphEntries(GraphEntries):

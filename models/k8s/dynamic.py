@@ -6,16 +6,16 @@ from pydantic import Field
 
 
 VERB_TO_PERMISSION = {
-    "get": "CAN_GET",
-    "list": "CAN_LIST",
-    "watch": "CAN_WATCH",
-    "create": "CAN_CREATE",
-    "update": "CAN_UPDATE",
-    "patch": "CAN_PATCH",
-    "delete": "CAN_DELETE",
-    "deletecollection": "CAN_DELETE_COLLECTION",
-    "proxy": "CAN_PROXY",
-    "*": "CAN_ALL",
+    "get": "K8sCanGet",
+    "list": "K8sCanList",
+    "watch": "K8sCanWatch",
+    "create": "K8sCanCreate",
+    "update": "K8sCanUpdate",
+    "patch": "K8sCanPatch",
+    "delete": "K8sCanDelete",
+    "deletecollection": "K8sCanDeleteCollection",
+    "proxy": "K8sCanProxy",
+    "*": "K8sCanAll",
 }
 
 
@@ -55,7 +55,7 @@ class DynamicNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BELONGS_TO', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -82,5 +82,5 @@ class DynamicNode(Node):
                                         namespace=kube_resource.metadata.namespace,
                                         **kube_resource.metadata.labels,
                                         )
-        return cls(id=kube_resource.metadata.uid, kinds=[f"Kube{kube_resource.kind}"], properties=properties,
+        return cls(id=kube_resource.metadata.uid, kinds=[f"K8s{kube_resource.kind}"], properties=properties,
                    source_role_uid=kube_resource.role.uid, source_role_permissions=kube_resource.role.permissions)

@@ -56,19 +56,19 @@ class ClusterRoleBindingNode(Node):
         target_id = lookups.cluster_roles[self.properties.role_ref]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='ReferencesRole', start=start_path, end=end_path)
+        edge = Edge(kind='K8sReferencesRole', start=start_path, end=end_path)
         return edge
 
     def _service_account(self, start_path, target, namespace):
         target_id = lookups.service_accounts[namespace].get(target.name)
         if not target_id:
             source_ref = SourceRef(name=self.properties.name, uid=self.id)
-            self._stale_collection.add(StaleReference(resource_type="KubeServiceAccount", name=target.name, source_ref=source_ref, edge_type="AUTHORIZES"))
+            self._stale_collection.add(StaleReference(resource_type="K8sServiceAccount", name=target.name, source_ref=source_ref, edge_type="K8sAuthorizes"))
             return None
 
         else:
             end_path = EdgePath(value=target_id, match_by='id')
-            return Edge(kind='Authorizes', start=start_path, end=end_path)
+            return Edge(kind='K8sAuthorizes', start=start_path, end=end_path)
 
     def _get_target_user(self, target_name: str) -> "EdgePath":
         target_id = lookups.users[target_name]
@@ -94,11 +94,11 @@ class ClusterRoleBindingNode(Node):
 
             elif target.kind == "User":
                 end_path = self._get_target_user(target.name)
-                edges.append(Edge(kind='Authorizes', start=start_path, end=end_path))
+                edges.append(Edge(kind='K8sAuthorizes', start=start_path, end=end_path))
 
             elif target.kind == "Group":
                 end_path = self._get_target_group(target.name)
-                edges.append(Edge(kind='Authorizes', start=start_path, end=end_path))
+                edges.append(Edge(kind='K8sAuthorizes', start=start_path, end=end_path))
 
         return edges
 
@@ -112,7 +112,6 @@ class ClusterRoleBindingNode(Node):
         properties = ExtendedProperties(
             name=model.metadata.name,
             displayname=model.metadata.name,
-            # objectid=model.metadata.uid,
             role_ref=model.role_ref.name,
             subjects=model.subjects )
-        return cls(id=model.metadata.uid, kinds=["KubeClusterRoleBinding", "KubeRoleBinding"], properties=properties)
+        return cls(id=model.metadata.uid, kinds=["K8sClusterRoleBinding", "K8sRoleBinding"], properties=properties)

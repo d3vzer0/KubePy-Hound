@@ -33,4 +33,4 @@ class ResourceGroupNode(Node):
     def from_input(cls, **kwargs) -> "ResourceGroupNode":
         model = ResourceGroup(**kwargs)
         properties = NodeProperties(name=model.name, displayname=model.name)
-        return cls(id=model.uid, kinds=["KubeResourceGroup"], properties=properties)
+        return cls(id=model.uid, kinds=["K8sResourceGroup"], properties=properties)

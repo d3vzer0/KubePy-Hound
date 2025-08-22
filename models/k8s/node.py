@@ -23,7 +23,7 @@ class NodeOutput(GraphNode):
         target_id = lookups.groups["system:authenticated"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
+        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
         return edge
 
     @property
@@ -31,14 +31,14 @@ class NodeOutput(GraphNode):
         target_id = lookups.groups["system:nodes"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
+        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
         return edge
 
     @property
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -49,4 +49,4 @@ class NodeOutput(GraphNode):
     def from_input(cls, **kwargs) -> "NodeOutput":
         node_out = Node(**kwargs)
         properties = NodeProperties(name=node_out.metadata.name, displayname=node_out.metadata.name)
-        return cls(id=node_out.metadata.uid, kinds=["KubeNode"], properties=properties)
+        return cls(id=node_out.metadata.uid, kinds=["K8sNode"], properties=properties)

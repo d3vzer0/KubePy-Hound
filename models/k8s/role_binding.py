@@ -61,7 +61,7 @@ class RoleBindingNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -69,7 +69,7 @@ class RoleBindingNode(Node):
         target_id = lookups.roles[self.properties.namespace][self.properties.role_ref]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='ReferencesRole', start=start_path, end=end_path)
+        edge = Edge(kind='K8sReferencesRole', start=start_path, end=end_path)
         return edge
 
     @property
@@ -82,18 +82,18 @@ class RoleBindingNode(Node):
                 target_id = lookups.service_accounts[namespace].get(target.name)
                 if target_id:
                     end_path = EdgePath(value=target_id, match_by='id')
-                    edges.append(Edge(kind='AUTHORIZES', start=start_path, end=end_path))
+                    edges.append(Edge(kind='K8sAuthorizes', start=start_path, end=end_path))
                 if not target_id:
                     source_ref = SourceRef(name=self.properties.name, uid=self.id)
                     self._stale_collection.add(StaleReference(resource_type="KubeServiceAccount", name=target.name, source_ref=source_ref, edge_type="AUTHORIZES"))
 
             elif target.kind == "User":
                 end_path = self._get_target_user(target.name)
-                edges.append(Edge(kind='AUTHORIZES', start=start_path, end=end_path))
+                edges.append(Edge(kind='K8sAuthorizes', start=start_path, end=end_path))
 
             elif target.kind == "Group":
                 end_path = self._get_target_group(target.name)
-                edges.append(Edge(kind='AUTHORIZES', start=start_path, end=end_path))
+                edges.append(Edge(kind='K8sAuthorizes', start=start_path, end=end_path))
 
             else:
                 print(f"Unsupported subject kind: {target.kind} in RoleBinding {self.properties.name}")
@@ -115,4 +115,4 @@ class RoleBindingNode(Node):
             namespace=model.metadata.namespace,
             role_ref=model.role_ref.name,
             subjects=model.subjects)
-        return cls(id=model.metadata.uid, kinds=["KubeScopedRoleBinding", "KubeRoleBinding"], properties=properties)
+        return cls(id=model.metadata.uid, kinds=["K8sScopedRoleBinding", "K8sRoleBinding"], properties=properties)

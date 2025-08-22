@@ -21,7 +21,7 @@ class NamespaceNode(Node):
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -32,4 +32,4 @@ class NamespaceNode(Node):
     def from_input(cls, **kwargs) -> "NamespaceNode":
         ns_node = Namespace(**kwargs)
         properties = NodeProperties(name=ns_node.metadata.name, displayname=ns_node.metadata.name)
-        return cls(id=ns_node.metadata.uid, kinds=["KubeNamespace"], properties=properties)
+        return cls(id=ns_node.metadata.uid, kinds=["K8sNamespace"], properties=properties)

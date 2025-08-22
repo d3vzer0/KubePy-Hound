@@ -66,7 +66,7 @@ class PodNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -74,7 +74,7 @@ class PodNode(Node):
         target_id = lookups.nodes[self.properties.node_name]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='RunsOn', start=start_path, end=end_path)
+        edge = Edge(kind='K8sRunsOn', start=start_path, end=end_path)
         return edge
 
     @property
@@ -82,7 +82,7 @@ class PodNode(Node):
         target_id = lookups.service_accounts[self.properties.namespace][self.properties.service_account_name]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='RunsOn', start=start_path, end=end_path)
+        edge = Edge(kind='K8sRunsOn', start=start_path, end=end_path)
         return edge
 
     @property
@@ -103,4 +103,4 @@ class PodNode(Node):
                                         **kube_pod.metadata.labels,
                                         **kube_pod.spec.containers[0].security_context.model_dump()
                                         )
-        return cls(id=kube_pod.metadata.uid, kinds=["KubePod"], properties=properties)
+        return cls(id=kube_pod.metadata.uid, kinds=["K8sPod"], properties=properties)

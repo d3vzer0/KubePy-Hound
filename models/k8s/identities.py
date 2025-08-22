@@ -25,7 +25,7 @@ class UserNode(Node):
         target_id = lookups.groups["system:authenticated"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MEMBER_OF', start=start_path, end=end_path)
+        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
         return edge
 
     @property
@@ -36,7 +36,7 @@ class UserNode(Node):
     def from_input(cls, **kwargs) -> "UserNode":
         model = User(**kwargs)
         properties = NodeProperties(name=model.name, displayname=model.name)
-        return cls(id=model.uid, kinds=["KubeUser"], properties=properties)
+        return cls(id=model.uid, kinds=["K8sUser"], properties=properties)
 
 
 class GroupNode(Node):
@@ -48,4 +48,4 @@ class GroupNode(Node):
     def from_input(cls, **kwargs) -> "GroupNode":
         model = Group(**kwargs)
         properties = NodeProperties(name=model.name, displayname=model.name)
-        return cls(id=model.uid, kinds=["KubeGroup"], properties=properties)
+        return cls(id=model.uid, kinds=["K8sGroup"], properties=properties)

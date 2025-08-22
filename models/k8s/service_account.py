@@ -52,7 +52,7 @@ class ServiceAccountNode(Node):
         target_id = lookups.namespaces[self.properties.namespace]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='BelongsTo', start=start_path, end=end_path)
+        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
         return edge
 
     @property
@@ -60,7 +60,7 @@ class ServiceAccountNode(Node):
         target_id = lookups.groups["system:authenticated"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
+        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
         return edge
 
     @property
@@ -68,7 +68,7 @@ class ServiceAccountNode(Node):
         target_id = lookups.groups["system:serviceaccounts"]
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='MemberOf', start=start_path, end=end_path)
+        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
         return edge
 
     @property
@@ -79,4 +79,4 @@ class ServiceAccountNode(Node):
     def from_input(cls, **kwargs) -> "ServiceAccountNode":
         model = ServiceAccount(**kwargs)
         properties = ExtendedProperties(name=model.metadata.name, displayname=model.metadata.name, namespace=model.metadata.namespace)
-        return cls(id=model.metadata.uid, kinds=["KubeServiceAccount"], properties=properties)
+        return cls(id=model.metadata.uid, kinds=["K8sServiceAccount"], properties=properties)
