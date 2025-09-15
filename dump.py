@@ -61,7 +61,6 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.CoreV1Api()
     namespaces = v1.list_namespace()
-    # kv_lookup = {}
     for ns in namespaces.items:
         ns_object = Namespace(**ns.to_dict())
         dump_client.write(
@@ -70,10 +69,6 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
             resource="namespaces",
             namespace=None,
         )
-
-    # kv_path = f"{output_dir}/rel/namespaces.json"
-    # dump_client.to_json(kv_path, json.dumps(kv_lookup), output_dir)
-
 
 @dump_app.command()
 def pods(ctx: typer.Context, output_dir: OutputPath):
@@ -108,10 +103,6 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
 
-    # kv_path = f"{output_dir}/rel/nodes.json"
-    # dump_client.to_json(kv_path, json.dumps(kv_lookup), output_dir)
-
-
 @dump_app.command()
 def cluster(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
@@ -121,7 +112,6 @@ def cluster(ctx: typer.Context, output_dir: OutputPath):
     dump_client.write(
         cluster_object, name=cluster_object.name, resource="clusters", namespace=None
     )
-    # dump_client.to_json(f"{output_dir}/rel/cluster.json", cluster_object.model_dump_json(indent=2), output_dir)
 
 
 @dump_app.command()
@@ -168,10 +158,6 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
             namespace=role_object.metadata.namespace,
         )
 
-    # kv_path = f"{output_dir}/rel/roles.json"
-    # dump_client.to_json(kv_path, json.dumps(kv_lookup), output_dir)
-
-
 @dump_app.command()
 def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
@@ -189,12 +175,8 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
 
-    # kv_path = f"{output_dir}/rel/cluster_roles.json"
-    # dump_client.to_json(kv_path, json.dumps(kv_lookup), output_dir)
-
 
 @dump_app.command()
-# @process_external_identities(output_dir="./output", scope="cluster")
 def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
 
@@ -240,9 +222,6 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
             namespace=sa_object.metadata.namespace,
         )
 
-    # kv_path = f"{output_dir}/rel/service_accounts.json"
-    # dump_client.to_json(kv_path, json.dumps(kv_lookup), output_dir)
-
 
 @dump_app.command()
 def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
@@ -261,10 +240,6 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
             namespace=es_object.metadata.namespace,
         )
 
-    # kv_path = f"{output_dir}/rel/endpoint-slices.json"
-    # dump_client.to_json(kv_path, json.dumps(kv_lookup), output_dir)
-
-
 @dump_app.command()
 def services(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
@@ -282,13 +257,12 @@ def services(ctx: typer.Context, output_dir: OutputPath):
 
 
 @dump_app.command()
-def crds(ctx: typer.Context, output_dir: OutputPath):
+def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
 
     api = client.ApisApi()
     custom = client.CustomObjectsApi()
 
-    # kv_lookup = defaultdict(dict)
     groups = api.get_api_versions()
     for group in groups.groups:
         group_object = ResourceGroup(**group.to_dict())
@@ -309,11 +283,13 @@ def crds(ctx: typer.Context, output_dir: OutputPath):
             dump_client.write(
                 resource_object,
                 name=f"{group.name}/{resource_object.name}",
-                resource="api_resources",
+                resource="custom_resource_defintions",
                 namespace=None,
             )
-            # kv_lookup[group_object.name][resource_object.name] = resource_object.uid
 
+@dump_app.command()
+def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
+    dump_client: DumpClient = ctx.obj["dump_client"]
     v1 = client.CoreV1Api()
     core_resources = v1.get_api_resources()
     for core_resource in core_resources.resources:
@@ -332,16 +308,11 @@ def crds(ctx: typer.Context, output_dir: OutputPath):
             api_group_uid=core_group.uid,
         )
         dump_client.write(
-            core_group,
+            core_resource_object,
             name=core_resource_object.name,
-            resource="core_resources",
+            resource="resource_defintions",
             namespace=None,
         )
-
-        # kv_lookup[core_group.name][core_resource_object.name] = core_resource_object.uid
-
-    # kv_output_path = f"{output_dir}/rel/api_resources.json"
-    # dump_client.to_json(kv_output_path, json.dumps(kv_lookup, indent=2), output_dir)
 
 
 # @dump_app.command()
@@ -389,7 +360,8 @@ def all(ctx: typer.Context, output_dir: OutputPath):
         ("service_accounts", service_accounts),
         ("endpoint_slices", endpoint_slices),
         ("services", services),
-        ("core_resources", crds),
+        ("resource_definitions", resource_definitions),
+        ("custom_resource_definitions", custom_resource_definitions)
     ]
     for name, func in dump_functions:
         typer.echo(f"Dumping {name}…")
