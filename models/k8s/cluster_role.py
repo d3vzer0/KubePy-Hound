@@ -105,28 +105,20 @@ class ClusterRoleNode(Node):
 
         return matched
 
-    def _matching_resources(self, target_group_resources: list, resources: list) -> list[str]:
-        matched = []
-        for resource in resources:
-            matched_keys = [key for key in target_group_resources.keys() if fnmatch.fnmatch(key, resource)]
-            matched.extend(matched_keys)
-        return matched
-
-
     def _rule_edge(self, rule: Rule):
         targets = []
         start_path = EdgePath(value=self.id, match_by='id')
         for target_group in rule.api_groups:
-            group_resources = lookups.resource_groups.get(target_group)
-            if not group_resources:
-                continue
-            if not rule.resources:
-                print(rule)
-            else:
-                matched_resources = self._matching_resources(group_resources, rule.resources)
-                for resource in matched_resources:
-                    target_id = group_resources.get(resource)
-                    end_path = EdgePath(value=target_id, match_by='id')
+            if rule.resources:
+                resources = (
+                    [lookups.resource_definitions(rule) for rule in rule.resources]
+                    if target_group == "__core__"
+                    else [
+                        lookups.custom_resource_definitions(rule) for rule in rule.resources
+                    ]
+                )
+                for resource in resources:
+                    end_path = EdgePath(value=resource, match_by="id")
                     matched_verbs = self._matching_verbs(rule.verbs)
                     for verb in matched_verbs:
                         verb_permission = VERB_TO_PERMISSION[verb]

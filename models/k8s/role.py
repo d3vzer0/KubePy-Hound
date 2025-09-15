@@ -55,10 +55,10 @@ class Rule(BaseModel):
     verbs: list[Verbs]
     resource_names: Optional[list[str]] = None
 
-    @field_validator('api_groups')
+    @field_validator("api_groups")
     def validate_api_groups(cls, v):
-        if not v or (len(v) == 1 and v[0] == ''):
-            return ['__core__']
+        if not v or (len(v) == 1 and v[0] == ""):
+            return ["__core__"]
         return v
 
 
@@ -66,7 +66,7 @@ class Role(BaseModel):
     metadata: Metadata
     rules: Optional[list[Rule]] = []
 
-    @field_validator('rules')
+    @field_validator("rules")
     def validate_rules(cls, v):
         if not v:
             return []
@@ -77,7 +77,7 @@ class ExtendedProperties(NodeProperties):
     namespace: str
     rules: list[Rule] = Field(exclude=True)
 
-    @field_validator('rules')
+    @field_validator("rules")
     def validate_rules(cls, v):
         if not v:
             return []
@@ -96,41 +96,33 @@ class RoleNode(Node):
 
         return matched
 
-    def _matching_resources(self, target_group_resources: list, resources: list) -> list[str]:
-        matched = []
-        for resource in resources:
-            matched_keys = [key for key in target_group_resources.keys() if fnmatch.fnmatch(key, resource)]
-            matched.extend(matched_keys)
-        return matched
-
     @property
     def _namespace_edge(self):
-        target_id = lookups.namespaces[self.properties.namespace]
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
+        target_id = lookups.namespaces(self.properties.namespace)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 
     def _rule_edge(self, rule: Rule):
         targets = []
-        start_path = EdgePath(value=self.id, match_by='id')
+        start_path = EdgePath(value=self.id, match_by="id")
         for target_group in rule.api_groups:
-            group_resources = lookups.resource_groups.get(target_group)
-            if not group_resources:
-                continue
-            if not rule.resources:
-                print(rule)
-            else:
-                matched_resources = self._matching_resources(group_resources, rule.resources)
-                for resource in matched_resources:
-                    print(resource)
-                    target_id = group_resources.get(resource)
-                    end_path = EdgePath(value=target_id, match_by='id')
-                    matched_verbs = self._matching_verbs(rule.verbs)
-                    for verb in matched_verbs:
-                        verb_permission = VERB_TO_PERMISSION[verb]
-                        edge = Edge(kind=verb_permission, start=start_path, end=end_path)
-                        targets.append(edge)
+            resources = (
+                [lookups.resource_definitions(rule) for rule in rule.resources]
+                if target_group == "__core__"
+                else [
+                    lookups.custom_resource_definitions(rule) for rule in rule.resources
+                ]
+            )
+            for resource in resources:
+                end_path = EdgePath(value=resource, match_by="id")
+                matched_verbs = self._matching_verbs(rule.verbs)
+                for verb in matched_verbs:
+                    verb_permission = VERB_TO_PERMISSION[verb]
+                    edge = Edge(kind=verb_permission, start=start_path, end=end_path)
+                    targets.append(edge)
+
         return targets
 
     @property
@@ -147,8 +139,17 @@ class RoleNode(Node):
     @classmethod
     def from_input(cls, **kwargs) -> "RoleNode":
         model = Role(**kwargs)
-        properties = ExtendedProperties(rules=model.rules, name=model.metadata.name, displayname=model.metadata.name, namespace=model.metadata.namespace)
-        return cls(id=model.metadata.uid, kinds=["K8sScopedRole", "K8sRole"], properties=properties)
+        properties = ExtendedProperties(
+            rules=model.rules,
+            name=model.metadata.name,
+            displayname=model.metadata.name,
+            namespace=model.metadata.namespace,
+        )
+        return cls(
+            id=model.metadata.uid,
+            kinds=["K8sScopedRole", "K8sRole"],
+            properties=properties,
+        )
 
 
 # class RoleGraphEntries(GraphEntries):
