@@ -1,8 +1,10 @@
-# KubePy-Hound
+# WIP: KubePy-Hound
 
 KubePy-Hound is a Python CLI that collects Kubernetes resources and converts them into
 BloodHound OpenGraph data. It is built with [Typer](https://typer.tiangolo.com/) and designed to
 be run either locally against a kubeconfig or as part of an automated collection pipeline.
+
+**Note:** Very very very- WIP. Use with caution, under active development but wanted to publish this either way while working on the project :) 
 
 ## Features
 
