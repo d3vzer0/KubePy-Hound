@@ -1,4 +1,6 @@
 output
+.DS_STORE
+data.duckdb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
