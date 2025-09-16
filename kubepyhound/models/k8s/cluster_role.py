@@ -22,6 +22,7 @@ class Verbs(str, Enum):
     approve = "approve"
     sign = "sign"
     escalate = "escalate"
+    bind = "bind"
 
     def __str__(self):
         return self.value
@@ -41,6 +42,7 @@ VERB_TO_PERMISSION = {
     "approve": "K8sCanApprove",
     "sign": "K8sCanSign",
     "escalate": "K8sCanEscalate",
+    "bind": "K8sCanBind",
     "*": "K8sCanAll",
 }
 

@@ -31,7 +31,7 @@ class Container(BaseModel):
     security_context: DefaultIfNone[SecurityContext | None] = Field(
         default_factory=SecurityContext
     )
-    volume_mounts: list[VolumeMount] = []
+    volume_mounts: list[VolumeMount] | None = []
 
 
 class Spec(BaseModel):
