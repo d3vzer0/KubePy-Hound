@@ -19,59 +19,58 @@ class LookupManager:
         with open(filepath, "r") as f:
             return json.load(f)
 
+    def _find_uid(self, *args) -> str:
+        self.con.execute(args)
+        result = self.con.fetchone()
+        return str(result[0]) if result else ""
+
     def nodes(self, name: str) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT metadata.uid FROM {self.db}.nodes WHERE metadata.name = ?", [name]
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
 
     def custom_resource_definitions(self, resource: str) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT uid FROM {self.db}.custom_resource_definitions WHERE name = ?",
             [resource],
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
 
     def resource_definitions(self, resource: str) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT uid FROM {self.db}.resource_definitions WHERE name = ?", [resource]
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
 
     def service_accounts(self, name: str, namespace: str) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT metadata.uid FROM {self.db}.service_accounts WHERE metadata.name = ? AND metadata.namespace = ?",
             [name, namespace],
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
 
     def roles(self, name: str, namespace: str) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT metadata.uid FROM {self.db}.roles WHERE metadata.name = ? AND metadata.namespace = ?",
             [name, namespace],
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
 
     def cluster_roles(self, name: str) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT metadata.uid FROM {self.db}.cluster_roles WHERE metadata.name = ?",
             [name],
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
 
     def namespaces(self, name) -> str:
-        self.con.execute(
+        return self._find_uid(
             f"SELECT metadata.uid FROM {self.db}.namespaces WHERE metadata.name = ?",
             [name],
         )
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
+
+    def users(self, name: str) -> str:
+        return self._find_uid(f"SELECT uid FROM {self.db}.users WHERE name = ?", [name])
+
+    def groups(self, name: str) -> str:
+        return self._find_uid(
+            f"SELECT uid FROM {self.db}.groups WHERE name = ?", [name]
+        )
 
     @property
     def cluster(self) -> Dict[str, Any]:
@@ -84,13 +83,3 @@ class LookupManager:
         if self._endpoint_slices is None:
             self._endpoint_slices = self._load_json("endpoint-slices.json")
         return self._endpoint_slices
-
-    def users(self, name: str) -> str:
-        self.con.execute(f"SELECT uid FROM {self.db}.users WHERE name = ?", [name])
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
-
-    def groups(self, name: str) -> str:
-        self.con.execute(f"SELECT uid FROM {self.db}.groups WHERE name = ?", [name])
-        results = self.con.fetchone()
-        return str(results[0]) if results else ""
