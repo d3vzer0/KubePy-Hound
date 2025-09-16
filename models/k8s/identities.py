@@ -22,7 +22,7 @@ class UserNode(Node):
 
     @property
     def _authenticated_group_edge(self):
-        target_id = lookups.groups["system:authenticated"]
+        target_id = lookups.groups("system:authenticated")
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
         edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)

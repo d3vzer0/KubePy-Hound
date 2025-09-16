@@ -283,7 +283,7 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
             dump_client.write(
                 resource_object,
                 name=f"{group.name}/{resource_object.name}",
-                resource="custom_resource_defintions",
+                resource="custom_resource_definitions",
                 namespace=None,
             )
 
@@ -310,7 +310,7 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
         dump_client.write(
             core_resource_object,
             name=core_resource_object.name,
-            resource="resource_defintions",
+            resource="resource_definitions",
             namespace=None,
         )
 
