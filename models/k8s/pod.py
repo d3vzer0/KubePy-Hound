@@ -12,7 +12,7 @@ def default_if_none(value: Any) -> Any:
     return value
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 DefaultIfNone = Annotated[T, BeforeValidator(default_if_none)]
 
 
@@ -28,7 +28,9 @@ class VolumeMount(BaseModel):
 
 class Container(BaseModel):
     image: str
-    security_context: DefaultIfNone[SecurityContext | None] = Field(default_factory=SecurityContext)
+    security_context: DefaultIfNone[SecurityContext | None] = Field(
+        default_factory=SecurityContext
+    )
     volume_mounts: list[VolumeMount] = []
 
 
@@ -52,7 +54,7 @@ class Pod(BaseModel):
 
 
 class ExtendedProperties(NodeProperties):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
     namespace: str
     node_name: str
     service_account_name: str
@@ -64,25 +66,27 @@ class PodNode(Node):
     @property
     def _namespace_edge(self):
         target_id = lookups.namespaces(self.properties.namespace)
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 
     @property
     def _node_edge(self):
         target_id = lookups.nodes(self.properties.node_name)
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sRunsOn', start=start_path, end=end_path)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sRunsOn", start=start_path, end=end_path)
         return edge
 
     @property
     def _service_account_edge(self):
-        target_id = lookups.service_accounts(self.properties.namespace, self.properties.service_account_name)
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sRunsOn', start=start_path, end=end_path)
+        target_id = lookups.service_accounts(
+            self.properties.namespace, self.properties.service_account_name
+        )
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sRunsOn", start=start_path, end=end_path)
         return edge
 
     @property
@@ -94,13 +98,14 @@ class PodNode(Node):
         kube_pod = Pod(**kwargs)
         if "name" in kube_pod.metadata.labels:
             del kube_pod.metadata.labels["name"]
-        properties = ExtendedProperties(name=kube_pod.metadata.name,
-                                        displayname=kube_pod.metadata.name,
-                                        # objectid=kube_pod.metadata.uid,
-                                        namespace=kube_pod.metadata.namespace,
-                                        node_name=kube_pod.spec.node_name,
-                                        service_account_name=kube_pod.spec.service_account_name,
-                                        **kube_pod.metadata.labels,
-                                        **kube_pod.spec.containers[0].security_context.model_dump()
-                                        )
+        properties = ExtendedProperties(
+            name=kube_pod.metadata.name,
+            displayname=kube_pod.metadata.name,
+            # objectid=kube_pod.metadata.uid,
+            namespace=kube_pod.metadata.namespace,
+            node_name=kube_pod.spec.node_name,
+            service_account_name=kube_pod.spec.service_account_name,
+            **kube_pod.metadata.labels,
+            **kube_pod.spec.containers[0].security_context.model_dump(),
+        )
         return cls(id=kube_pod.metadata.uid, kinds=["K8sPod"], properties=properties)

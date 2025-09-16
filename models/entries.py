@@ -18,9 +18,14 @@ class StaleReference(BaseModel):
     edge_type: str
     uid: str | None = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def set_guid(self) -> "StaleReference":
-        self.uid = get_guid(self.name, scope="system/{source_ref}", kube_type="serviceaccount", name=self.name)
+        self.uid = get_guid(
+            self.name,
+            scope="system/{source_ref}",
+            kube_type="serviceaccount",
+            name=self.name,
+        )
         return self
 
 
@@ -40,7 +45,7 @@ class StaleReferenceCollector(BaseModel):
 
 
 class NodeProperties(BaseModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
     name: str
     displayname: str
     exists: bool = True
@@ -48,21 +53,21 @@ class NodeProperties(BaseModel):
 
 
 class Node(BaseModel, ABC):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
     id: str
     kinds: list[str]
     properties: NodeProperties
-    _stale_collection: StaleReferenceCollector = PrivateAttr(default_factory=StaleReferenceCollector)
+    _stale_collection: StaleReferenceCollector = PrivateAttr(
+        default_factory=StaleReferenceCollector
+    )
 
     @classmethod
     @abstractmethod
-    def from_input(cls, **kwargs) -> "Node":
-        ...
+    def from_input(cls, **kwargs) -> "Node": ...
 
     @property
     @abstractmethod
-    def edges(self) -> list["Edge"]:
-        ...
+    def edges(self) -> list["Edge"]: ...
 
 
 class EdgePath(BaseModel):
@@ -71,7 +76,7 @@ class EdgePath(BaseModel):
 
 
 class EdgeProperties(BaseModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
     composed: bool = False
 
 

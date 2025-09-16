@@ -15,7 +15,7 @@ class Endpoint(BaseModel):
 
 
 class Labels(BaseModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
     service_name: str = Field(alias="kubernetes.io/service-name")
 
 

@@ -13,13 +13,13 @@ class GraphEntries(BaseModel):
 
 
 class CollectorProperties(BaseModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra="allow")
     collection_methods: list[str] = ["Custom Method"]
     windows_server_version: str = "n/a"
 
 
 class MetaDataCollector(BaseModel):
-    name: str = "KupyHound-0.0.3"
+    name: str = "KubePyHound-0.0.1"
     version: str = "beta"
     properties: CollectorProperties = Field(default_factory=CollectorProperties)
 

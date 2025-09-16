@@ -17,9 +17,11 @@ class ResourceGroup(BaseModel):
     versions: list[GroupVersion]
     uid: Optional[str] = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def set_guid(self) -> Self:
-        self.uid = get_guid(self.name, scope="system", kube_type="resource_group", name=self.name)
+        self.uid = get_guid(
+            self.name, scope="system", kube_type="resource_group", name=self.name
+        )
         return self
 
 

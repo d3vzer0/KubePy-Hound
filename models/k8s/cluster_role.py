@@ -58,10 +58,10 @@ class Rule(BaseModel):
     verbs: list[Verbs]
     resource_names: Optional[list[str]] = None
 
-    @field_validator('api_groups')
+    @field_validator("api_groups")
     def validate_api_groups(cls, v):
-        if not v or (len(v) == 1 and v[0] == ''):
-            return ['__core__']
+        if not v or (len(v) == 1 and v[0] == ""):
+            return ["__core__"]
         return v
 
 
@@ -69,7 +69,7 @@ class ClusterRole(BaseModel):
     metadata: Metadata
     rules: list[Rule] = []
 
-    @field_validator('rules', mode='before')
+    @field_validator("rules", mode="before")
     def validate_rules(cls, v):
         if not v:
             return []
@@ -79,7 +79,7 @@ class ClusterRole(BaseModel):
 class ExtendedProperties(NodeProperties):
     rules: list[Rule] = Field(exclude=True)
 
-    @field_validator('rules')
+    @field_validator("rules")
     def validate_rules(cls, v):
         if not v:
             return []
@@ -91,9 +91,9 @@ class ClusterRoleNode(Node):
 
     @property
     def _cluster_edge(self):
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=lookups.cluster["uid"], match_by='id')
-        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=lookups.cluster["uid"], match_by="id")
+        edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 
     def _matching_verbs(self, verbs: list) -> list:
@@ -107,23 +107,27 @@ class ClusterRoleNode(Node):
 
     def _rule_edge(self, rule: Rule):
         targets = []
-        start_path = EdgePath(value=self.id, match_by='id')
-        for target_group in rule.api_groups:
-            if rule.resources:
-                resources = (
-                    [lookups.resource_definitions(rule) for rule in rule.resources]
-                    if target_group == "__core__"
-                    else [
-                        lookups.custom_resource_definitions(rule) for rule in rule.resources
-                    ]
-                )
-                for resource in resources:
-                    end_path = EdgePath(value=resource, match_by="id")
-                    matched_verbs = self._matching_verbs(rule.verbs)
-                    for verb in matched_verbs:
-                        verb_permission = VERB_TO_PERMISSION[verb]
-                        edge = Edge(kind=verb_permission, start=start_path, end=end_path)
-                        targets.append(edge)
+        if rule.api_groups:
+            start_path = EdgePath(value=self.id, match_by="id")
+            for target_group in rule.api_groups:
+                if rule.resources:
+                    resources = (
+                        [lookups.resource_definitions(rule) for rule in rule.resources]
+                        if target_group == "__core__"
+                        else [
+                            lookups.custom_resource_definitions(rule)
+                            for rule in rule.resources
+                        ]
+                    )
+                    for resource in resources:
+                        end_path = EdgePath(value=resource, match_by="id")
+                        matched_verbs = self._matching_verbs(rule.verbs)
+                        for verb in matched_verbs:
+                            verb_permission = VERB_TO_PERMISSION[verb]
+                            edge = Edge(
+                                kind=verb_permission, start=start_path, end=end_path
+                            )
+                            targets.append(edge)
         return targets
 
     @property
@@ -141,8 +145,14 @@ class ClusterRoleNode(Node):
     @classmethod
     def from_input(cls, **kwargs) -> "ClusterRoleNode":
         model = ClusterRole(**kwargs)
-        properties = ExtendedProperties(name=model.metadata.name, displayname=model.metadata.name, rules=model.rules)
-        return cls(id=model.metadata.uid, kinds=["K8sClusterRole", "K8sRole"], properties=properties)
+        properties = ExtendedProperties(
+            name=model.metadata.name, displayname=model.metadata.name, rules=model.rules
+        )
+        return cls(
+            id=model.metadata.uid,
+            kinds=["K8sClusterRole", "K8sRole"],
+            properties=properties,
+        )
 
 
 # class ClusterRoleGraphEntries(GraphEntries):

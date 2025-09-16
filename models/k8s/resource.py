@@ -17,9 +17,11 @@ class Resource(BaseModel):
     api_group_name: Optional[str] = ""
     api_group_uid: Optional[str] = ""
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def set_guid(self) -> Self:
-        self.uid = get_guid(self.name, scope="system", kube_type="resource", name=self.name)
+        self.uid = get_guid(
+            self.name, scope="system", kube_type="resource", name=self.name
+        )
         return self
 
 
@@ -35,27 +37,30 @@ class ResourceNode(Node):
     @property
     def _resource_group_edge(self):
         if self.properties.api_group_uid:
-            start_path = EdgePath(value=self.id, match_by='id')
-            end_path = EdgePath(value=self.properties.api_group_uid, match_by='id')
-            edge = Edge(kind='K8sInResourceGroup', start=start_path, end=end_path)
+            start_path = EdgePath(value=self.id, match_by="id")
+            end_path = EdgePath(value=self.properties.api_group_uid, match_by="id")
+            edge = Edge(kind="K8sInResourceGroup", start=start_path, end=end_path)
             return edge
         else:
             return None
 
     @property
     def edges(self):
-        resource_group_edge = [self._resource_group_edge] if self._resource_group_edge else []
+        resource_group_edge = (
+            [self._resource_group_edge] if self._resource_group_edge else []
+        )
         return resource_group_edge
 
     @classmethod
     def from_input(cls, **kwargs) -> "ResourceNode":
         model = Resource(**kwargs)
-        properties = ExtendedProperties(name=model.name,
-                                        displayname=model.name,
-                                        # objectid=model.uid,
-                                        kind=model.kind,
-                                        # group=model.group,
-                                        api_group_name=model.api_group_name,
-                                        api_group_uid=model.api_group_uid,
-                                        )
+        properties = ExtendedProperties(
+            name=model.name,
+            displayname=model.name,
+            # objectid=model.uid,
+            kind=model.kind,
+            # group=model.group,
+            api_group_name=model.api_group_name,
+            api_group_uid=model.api_group_uid,
+        )
         return cls(id=model.uid, kinds=["K8sResource"], properties=properties)

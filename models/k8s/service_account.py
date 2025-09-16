@@ -50,33 +50,43 @@ class ServiceAccountNode(Node):
     @property
     def _namespace_edge(self):
         target_id = lookups.namespaces(self.properties.namespace)
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 
     @property
     def _authenticated_group_edge(self):
         target_id = lookups.groups("system:authenticated")
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
         return edge
 
     @property
     def _service_accounts_edge(self):
         target_id = lookups.groups("system:serviceaccounts")
-        start_path = EdgePath(value=self.id, match_by='id')
-        end_path = EdgePath(value=target_id, match_by='id')
-        edge = Edge(kind='K8sMemberOf', start=start_path, end=end_path)
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
+        edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
         return edge
 
     @property
     def edges(self) -> list:
-        return [self._namespace_edge, self._authenticated_group_edge, self._service_accounts_edge]
+        return [
+            self._namespace_edge,
+            self._authenticated_group_edge,
+            self._service_accounts_edge,
+        ]
 
     @classmethod
     def from_input(cls, **kwargs) -> "ServiceAccountNode":
         model = ServiceAccount(**kwargs)
-        properties = ExtendedProperties(name=model.metadata.name, displayname=model.metadata.name, namespace=model.metadata.namespace)
-        return cls(id=model.metadata.uid, kinds=["K8sServiceAccount"], properties=properties)
+        properties = ExtendedProperties(
+            name=model.metadata.name,
+            displayname=model.metadata.name,
+            namespace=model.metadata.namespace,
+        )
+        return cls(
+            id=model.metadata.uid, kinds=["K8sServiceAccount"], properties=properties
+        )

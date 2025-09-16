@@ -8,9 +8,11 @@ class Cluster(BaseModel):
     name: str
     uid: str | None = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def set_guid(self) -> Self:
-        self.uid = get_guid(self.name, scope="system", kube_type="cluster", name=self.name)
+        self.uid = get_guid(
+            self.name, scope="system", kube_type="cluster", name=self.name
+        )
         return self
 
 
