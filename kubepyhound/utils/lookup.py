@@ -78,8 +78,8 @@ class LookupManager:
             self._cluster = self._load_json("cluster.json")
         return self._cluster
 
-    @property
-    def endpoint_slices(self) -> Dict[str, Any]:
-        if self._endpoint_slices is None:
-            self._endpoint_slices = self._load_json("endpoint-slices.json")
-        return self._endpoint_slices
+    # @property
+    # def endpoint_slices(self) -> Dict[str, Any]:
+    #     if self._endpoint_slices is None:
+    #         self._endpoint_slices = self._load_json("endpoint-slices.json")
+    #     return self._endpoint_slices

@@ -1,6 +1,6 @@
 import typer
 from kubepyhound.sync import sync_app
-from kubepyhound.utils.dump import dump_app
+from kubepyhound.dump import dump_app
 
 
 app = typer.Typer()

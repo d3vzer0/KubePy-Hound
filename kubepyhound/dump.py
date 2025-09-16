@@ -363,7 +363,7 @@ def all(ctx: typer.Context, output_dir: OutputPath):
         ("cluster_roles", cluster_roles),
         ("cluster_role_bindings", cluster_role_bindings),
         ("service_accounts", service_accounts),
-        ("endpoint_slices", endpoint_slices),
+        # ("endpoint_slices", endpoint_slices),
         ("services", services),
         ("resource_definitions", resource_definitions),
         ("custom_resource_definitions", custom_resource_definitions),
