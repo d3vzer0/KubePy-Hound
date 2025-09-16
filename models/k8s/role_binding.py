@@ -49,16 +49,16 @@ class RoleBindingNode(Node):
     properties: ExtendedProperties
 
     def _get_target_user(self, target_name: str) -> "EdgePath":
-        target_id = lookups.users[target_name]
+        target_id = lookups.users(target_name)
         return EdgePath(value=target_id, match_by='id')
 
     def _get_target_group(self, target_name: str) -> "EdgePath":
-        target_id = lookups.groups[target_name]
+        target_id = lookups.groups(target_name)
         return EdgePath(value=target_id, match_by='id')
 
     @property
     def _namespace_edge(self):
-        target_id = lookups.namespaces[self.properties.namespace]
+        target_id = lookups.namespaces(self.properties.namespace)
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
         edge = Edge(kind='K8sBelongsTo', start=start_path, end=end_path)
@@ -66,7 +66,7 @@ class RoleBindingNode(Node):
 
     @property
     def _role_edge(self):
-        target_id = lookups.roles[self.properties.namespace][self.properties.role_ref]
+        target_id = lookups.roles(self.properties.role_ref, self.properties.namespace)
         start_path = EdgePath(value=self.id, match_by='id')
         end_path = EdgePath(value=target_id, match_by='id')
         edge = Edge(kind='K8sReferencesRole', start=start_path, end=end_path)
@@ -79,7 +79,7 @@ class RoleBindingNode(Node):
         for target in self.properties.subjects:
             if target.kind == "ServiceAccount":
                 namespace = target.namespace if target.namespace else self.properties.namespace
-                target_id = lookups.service_accounts[namespace].get(target.name)
+                target_id = lookups.service_accounts(target.name, namespace)
                 if target_id:
                     end_path = EdgePath(value=target_id, match_by='id')
                     edges.append(Edge(kind='K8sAuthorizes', start=start_path, end=end_path))
