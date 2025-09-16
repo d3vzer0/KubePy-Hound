@@ -1,6 +1,9 @@
-output
+# Custom gitignore
 .DS_STORE
-data.duckdb
+k8s.duckdb
+graph.json
+output
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -18,8 +18,10 @@ from kubepyhound.models.eks.user import IAMUser
 from kubepyhound.utils.helpers import DumpClient
 from kubepyhound.utils.mapper import NamespaceResourceMapper
 from kubepyhound.models.k8s.service_account import ServiceAccount
+from kubepyhound.models import lookups
 from collections import defaultdict
 from pathlib import Path
+import duckdb
 import typer
 from enum import Enum
 
@@ -37,7 +39,7 @@ OutputPath = Annotated[
 
 
 class OutputFormat(str, Enum):
-    json = "json"
+    simple = "simple"
     ndjson = "ndjson"
 
 
@@ -48,11 +50,13 @@ IDENTITY_MAPPING = {"User": User, "Group": Group}
 def main(
     ctx: typer.Context,
     output_format: OutputFormat = typer.Option(
-        OutputFormat.json, "--format", case_sensitive=False
+        OutputFormat.simple, "--format", case_sensitive=False
     ),
 ):
     ctx.ensure_object(dict)
-    ctx.obj["dump_client"] = DumpClient(base_dir=Path("./output"), mode=output_format)
+    ctx.obj["dump_client"] = DumpClient(
+        base_dir=Path("./output"), mode=output_format.value
+    )
 
 
 @dump_app.command()
@@ -112,7 +116,7 @@ def cluster(ctx: typer.Context, output_dir: OutputPath):
     conf = config.list_kube_config_contexts()[1]
     cluster_object = Cluster(name=conf["context"]["cluster"])
     dump_client.write(
-        cluster_object, name=cluster_object.name, resource="clusters", namespace=None
+        cluster_object, name="cluster", resource="cluster", namespace=None
     )
 
 
@@ -349,6 +353,13 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 #                         dynamic_resource = DynamicResource(**resource, role=source_role)
 #                         resource_output_path = f"{output_dir}/namespaces/{dynamic_resource.metadata.namespace}/dynamic/{dynamic_resource.metadata.name}.json"
 #                         dump_client.to_json(resource_output_path, dynamic_resource.model_dump_json(indent=2), output_dir)
+
+
+@dump_app.command()
+def populate_db():
+    typer.echo("Populating local duckdb with values for k8s lookups")
+    lookups.bootstrap()
+    typer.echo("Finsihed populating duckdb")
 
 
 @dump_app.command()

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class OutputFormat(str, Enum):
-    json = "json"
+    simple = "json"
     ndjson = "ndjson"
 
 
@@ -18,11 +18,11 @@ def load_json(input_file: str):
 
 
 class DumpClient:
-    def __init__(self, base_dir: Path, mode: OutputFormat = OutputFormat.json):
+    def __init__(self, base_dir: Path, mode: str):
         self.base_dir = Path(base_dir).resolve()
         self._writer = {
-            OutputFormat.json: self._to_json,
-            OutputFormat.ndjson: self._to_ndjson,
+            "simple": self._to_json,
+            "ndjson": self._to_ndjson,
         }[mode]
 
     def write(
