@@ -66,8 +66,10 @@ def process_resources(resource_files: list[str], model_class: Type[T], bloodhoun
 
     graph = Graph(graph=graph_entries)
     typer.echo("Finalized node and edge convertion")
+    # TODO: Auto upload
     # bloodhound.upload(graph.model_dump_json(exclude_unset=False))
 
+    # TODO: Choose to save or upload
     with open('graph.json', 'w') as outputfile:
         outputfile.write(graph.model_dump_json(exclude_unset=False, indent=2))
     typer.echo("Uploaded Graph file to bloodhound")
@@ -88,11 +90,14 @@ def sync_callback(
             resolve_path=True,
         ),
     ],
-    token: Annotated[str, typer.Option(envvar="BH_TOKEN")]
+    bhe_uri: Annotated[str, typer.Option(envvar="BHE_URI")],
+    token_id: Annotated[str, typer.Option(envvar="BHE_API_ID")],
+    token_key: Annotated[str, typer.Option(envvar="BHE_API_KEY")]
+    
 ):
     ctx.obj = {
         "input_path": input,
-        "bloodhound": BloodHound(token_key=token)
+        "bloodhound": BloodHound(token_id=token_id, token_key=token_key, bhe_uri=bhe_uri)
     }
 
 
@@ -107,12 +112,12 @@ def cluster(ctx: typer.Context):
 
     with open('graph.json', 'w') as outfile:
         outfile.write(graph.model_dump_json(exclude_unset=False))
-    ctx.obj['bloodhound'].upload(graph.model_dump(exclude_unset=False))
+    ctx.obj['bloodhound'].upload(graph.model_dump_json(exclude_unset=False))
 
 
 @sync_app.command()
 def namespaces(ctx: typer.Context):
-    resource_files = glob.glob(f"{ctx.obj['input_path']}/**/namespace.json", recursive=True)
+    resource_files = glob.glob(f"{ctx.obj['input_path']}//namespaces/*.json", recursive=True)
     typer.echo(f"Found {len(resource_files)} namespaces")
     return process_resources(resource_files, NamespaceNode, ctx.obj['bloodhound'])
 
@@ -141,7 +146,7 @@ def roles(ctx: typer.Context):
 @sync_app.command()
 @process_stale_refs('rolebindings', output_dir="./output")
 def role_bindings(ctx: typer.Context):
-    resource_files = glob.glob(f"{ctx.obj['input_path']}/namespaces/**/rolebindings/*.json", recursive=True)
+    resource_files = glob.glob(f"{ctx.obj['input_path']}/namespaces/**/role_bindings/*.json", recursive=True)
     typer.echo(f"Found {len(resource_files)} rolebindings")
     return process_resources(resource_files, RoleBindingNode, ctx.obj['bloodhound'])
 
@@ -176,15 +181,15 @@ def resource_groups(ctx: typer.Context):
 
 
 @sync_app.command()
-def custom_resources(ctx: typer.Context):
-    resource_files = glob.glob(f"{ctx.obj['input_path']}/api_resources/**/*.json", recursive=True)
+def custom_resource_definitions(ctx: typer.Context):
+    resource_files = glob.glob(f"{ctx.obj['input_path']}/custom_resource_definitions/**/*.json", recursive=True)
     typer.echo(f"Found {len(resource_files)} custom resources")
     return process_resources(resource_files, ResourceNode, ctx.obj['bloodhound'])
 
 
 @sync_app.command()
-def core_resources(ctx: typer.Context):
-    resource_files = glob.glob(f"{ctx.obj['input_path']}/core_resources/**/*.json", recursive=True)
+def resource_definitions(ctx: typer.Context):
+    resource_files = glob.glob(f"{ctx.obj['input_path']}/resource_definitions/**/*.json", recursive=True)
     typer.echo(f"Found {len(resource_files)} core resources")
     return process_resources(resource_files, ResourceNode, ctx.obj['bloodhound'])
 
@@ -242,3 +247,23 @@ def icons(ctx: typer.Context):
         response = ctx.obj['bloodhound'].custom_node(custom.model_dump_json())
         print(response.json())
     typer.echo("Synced custom icons with bloodhound")
+
+
+@sync_app.command()
+def all(ctx: typer.Context):
+    dump_functions = [
+        ("cluster", cluster),
+        ("namespaces", namespaces),
+        ("nodes", nodes),
+        ("pods", pods),
+        ("roles", roles),
+        ("rolebindings", role_bindings),
+        ("cluster_roles", cluster_roles),
+        ("cluster_role_bindings", cluster_role_bindings),
+        ("service_accounts", service_accounts),
+        ("resource_definitions", resource_definitions),
+        ("custom_resource_definitions", custom_resource_definitions)
+    ]
+    for name, func in dump_functions:
+        typer.echo(f"Syncing {name}…")
+        ctx.invoke(func, ctx)
