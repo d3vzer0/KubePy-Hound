@@ -21,12 +21,23 @@ from kubepyhound.models.k8s.service_account import ServiceAccount
 from kubepyhound.models import lookups
 from collections import defaultdict
 from pathlib import Path
+from rich.progress import Progress, SpinnerColumn, TextColumn
 import duckdb
 import typer
 from enum import Enum
 
 dump_app = typer.Typer()
+progress = Progress(
+    transient=True,
+)
+workers = Progress(
+    SpinnerColumn(),
+    TextColumn("{task.description}"),
+    transient=True,
+)
 
+progress.start()
+workers.start()
 
 config.load_kube_config()
 
@@ -62,6 +73,7 @@ def main(
 @dump_app.command()
 def namespaces(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting namespaces...", total=None)
 
     v1 = client.CoreV1Api()
     namespaces = v1.list_namespace()
@@ -73,11 +85,13 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
             resource="namespaces",
             namespace=None,
         )
+    workers.update(task_id, description="[green]Collecting namespaces: complete")
 
 
 @dump_app.command()
 def pods(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting pods...", total=None)
 
     v1 = client.CoreV1Api()
     pods = v1.list_pod_for_all_namespaces()
@@ -90,10 +104,13 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
             namespace=pod_object.metadata.namespace,
         )
 
+    workers.update(task_id, description="[green]Collecting pods: complete")
+
 
 @dump_app.command()
 def nodes(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting nodes...", total=None)
 
     v1 = client.CoreV1Api()
     nodes = v1.list_node()
@@ -107,11 +124,13 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
             resource="nodes",
             namespace=None,
         )
+    workers.update(task_id, description="[green]Collecting ndoes: complete")
 
 
 @dump_app.command()
 def cluster(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting cluster...", total=None)
 
     conf = config.list_kube_config_contexts()[1]
     cluster_object = Cluster(name=conf["context"]["cluster"])
@@ -119,10 +138,13 @@ def cluster(ctx: typer.Context, output_dir: OutputPath):
         cluster_object, name="cluster", resource="cluster", namespace=None
     )
 
+    workers.update(task_id, description="[green]Collecting cluster: complete")
+
 
 @dump_app.command()
 def role_bindings(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting role-bindings...", total=None)
 
     v1 = client.RbacAuthorizationV1Api()
     rolebs = v1.list_role_binding_for_all_namespaces()
@@ -143,11 +165,13 @@ def role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=roleb_object.metadata.namespace,
                 )
+    workers.update(task_id, description="[green]Collecting role-bindings: complete")
 
 
 @dump_app.command()
 def roles(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting roles...", total=None)
 
     v1 = client.RbacAuthorizationV1Api()
     roles = v1.list_role_for_all_namespaces()
@@ -163,11 +187,13 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
             resource="roles",
             namespace=role_object.metadata.namespace,
         )
+    workers.update(task_id, description="[green]Collecting roles: complete")
 
 
 @dump_app.command()
 def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting cluster roles...", total=None)
 
     v1 = client.RbacAuthorizationV1Api()
     roles = v1.list_cluster_role()
@@ -181,11 +207,13 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
             resource="cluster_roles",
             namespace=None,
         )
+    workers.update(task_id, description="[green]Collecting cluster roles: complete")
 
 
 @dump_app.command()
 def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting cluster role-bindings...", total=None)
 
     v1 = client.RbacAuthorizationV1Api()
     rolebs = v1.list_cluster_role_binding()
@@ -207,11 +235,15 @@ def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=None,
                 )
+    workers.update(
+        task_id, description="[green]Collecting cluster role-bindings: complete"
+    )
 
 
 @dump_app.command()
 def service_accounts(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting service accounts...", total=None)
 
     v1 = client.CoreV1Api()
     service_accounts = v1.list_service_account_for_all_namespaces()
@@ -228,11 +260,13 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
             resource="serviceaccounts",
             namespace=sa_object.metadata.namespace,
         )
+    workers.update(task_id, description="[green]Collecting service accounts: complete")
 
 
 @dump_app.command()
 def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting endpoint slices...", total=None)
 
     v1 = client.DiscoveryV1Api()
     endpoint_slices = v1.list_endpoint_slice_for_all_namespaces()
@@ -246,11 +280,13 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
             resource="endpoint_slices",
             namespace=es_object.metadata.namespace,
         )
+    workers.update(task_id, description="[green]Collecting endpoint slices: complete")
 
 
 @dump_app.command()
 def services(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting services...", total=None)
 
     v1 = client.CoreV1Api()
     services = v1.list_service_for_all_namespaces()
@@ -262,11 +298,13 @@ def services(ctx: typer.Context, output_dir: OutputPath):
             resource="services",
             namespace=service_object.metadata.namespace,
         )
+    workers.update(task_id, description="[green]Collecting services: complete")
 
 
 @dump_app.command()
 def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting CRDs...", total=None)
 
     api = client.ApisApi()
     custom = client.CustomObjectsApi()
@@ -294,11 +332,14 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
                 resource="custom_resource_definitions",
                 namespace=None,
             )
+    workers.update(task_id, description="[green]Collecting CRDs: complete")
 
 
 @dump_app.command()
 def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
+    task_id = workers.add_task("Collecting resource definitions...", total=None)
+
     v1 = client.CoreV1Api()
     core_resources = v1.get_api_resources()
     for core_resource in core_resources.resources:
@@ -322,6 +363,10 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
             resource="resource_definitions",
             namespace=None,
         )
+
+    workers.update(
+        task_id, description="[green]Collecting resource definitions: complete"
+    )
 
 
 # @dump_app.command()
@@ -379,6 +424,14 @@ def all(ctx: typer.Context, output_dir: OutputPath):
         ("resource_definitions", resource_definitions),
         ("custom_resource_definitions", custom_resource_definitions),
     ]
-    for name, func in dump_functions:
-        typer.echo(f"Dumping {name}…")
+
+    total_progress = progress.add_task(
+        f"[green]Collecting k8s resources", total=len(dump_functions)
+    )
+
+    for _, func in dump_functions:
+        progress.advance(total_progress)
         ctx.invoke(func, ctx, output_dir=output_dir)
+
+    progress.stop()
+    workers.stop()
