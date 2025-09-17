@@ -1,6 +1,7 @@
 # Custom gitignore
 .DS_STORE
 k8s.duckdb
+k8s.duckdb.wal
 graph
 output
 
