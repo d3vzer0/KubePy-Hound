@@ -59,6 +59,7 @@ convert_app = typer.Typer()
 class SyncOptions:
     input: Path
     session: BloodHound
+    job_id: int | None = None
     mode: str = "sync"
 
 
@@ -75,7 +76,7 @@ class ResourceGraph:
         self.model_class = model_class
 
     @property
-    def graph(self):
+    def graph(self) -> Graph:
         graph_entries = GraphEntries()
         for resource in self.files:
             node = self.model_class.from_input(**load_json(resource))
@@ -85,10 +86,19 @@ class ResourceGraph:
             # stale_refs.extend(node._stale_collection.stale_refs)
         return Graph(graph=graph_entries)
 
-    def to_file(self, output_path: Path):
+    def to_file(self, output_path: Path) -> None:
         with open(output_path, "w") as outputfile:
             outputfile.write(self.graph.model_dump_json(exclude_unset=False, indent=2))
             typer.echo(f"Generated graph as {output_path}")
+
+    def to_bloodhound(self, session: BloodHound, ctx: SyncOptions) -> None:
+        if not ctx.job_id:
+            ctx.job_id = session.start_upload_job()
+            print(ctx.job_id)
+
+        session.upload_graph(
+            ctx.job_id, self.graph.model_dump_json(exclude_unset=False, indent=2)
+        )
 
 
 def process_resources(
@@ -101,6 +111,9 @@ def process_resources(
     if isinstance(options, ConvertOptions):
         output_file = options.output / f"{model_class.__name__.lower()}.json"
         graph.to_file(output_file)
+
+    if isinstance(options, SyncOptions):
+        graph.to_bloodhound(options.session, options)
 
 
 @sync_app.callback()
@@ -332,3 +345,6 @@ def shared_commands(app: typer.Typer):
         for name, func in dump_functions:
             typer.echo(f"Syncing {name}…")
             ctx.invoke(func, ctx)
+
+        if isinstance(ctx.obj, SyncOptions) and ctx.obj.job_id:
+            ctx.obj.session.stop_upload_job(ctx.obj.job_id)

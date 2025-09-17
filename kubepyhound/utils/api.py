@@ -14,7 +14,7 @@ class BloodHound:
         self.token_id = token_id
         self.base_uri = bhe_uri
 
-    def request(self, method: str, path: str, body: str | None = None):
+    def request(self, method: str, path: str, body: bytes | None = None):
         # HMAC Part 1
         digester = hmac.new(self.token_key.encode(), None, hashlib.sha256)
         digester.update(f"{method}{path}".encode())
@@ -46,36 +46,36 @@ class BloodHound:
             data=body,
         )
 
-    def _start_upload(self) -> int:
+    def start_upload_job(self) -> int:
         path = "/api/v2/file-upload/start"
         response = self.request(method="POST", path=path)
         return response.json()["data"]["id"]
 
-    def _start_upload_job(self, id: int, body: dict):
+    def upload_graph(self, id: int, body: str):
         path = f"/api/v2/file-upload/{id}"
-        response = self.request(method="POST", path=path, body=body)
+        response = self.request(method="POST", path=path, body=body.encode())
         return response
 
-    def _stop_upload_job(self, id: int):
+    def stop_upload_job(self, id: int):
         path = f"/api/v2/file-upload/{id}/end"
         response = self.request(method="POST", path=path)
         return response
 
-    def upload(self, body: str):
-        job_id = self._start_upload()
-        response = self._start_upload_job(job_id, body.encode())
-        if response.status_code == 202:
-            self._stop_upload_job(job_id)
-        else:
-            print("Issue with uploading job")
-            print(response.json())
+    # def upload(self, body: str):
+    #     job_id = self._start_upload()
+    #     response = self._start_upload_job(job_id, body.encode())
+    #     if response.status_code == 202:
+    #         self._stop_upload_job(job_id)
+    #     else:
+    #         print("Issue with uploading job")
+    #         print(response.json())
 
-    def saved_query(self, body: dict):
+    def saved_query(self, body: str):
         path = "/api/v2/saved-queries"
-        response = self.request(method="POST", path=path, body=body)
+        response = self.request(method="POST", path=path, body=body.encode())
         return response
 
-    def custom_node(self, body: dict):
+    def custom_node(self, body: str):
         path = "/api/v2/custom-nodes"
-        response = self.request(method="POST", path=path, body=body)
+        response = self.request(method="POST", path=path, body=body.encode())
         return response

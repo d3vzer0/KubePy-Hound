@@ -1,7 +1,7 @@
 # Custom gitignore
 .DS_STORE
 k8s.duckdb
-graph.json
+graph
 output
 
 

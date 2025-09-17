@@ -25,7 +25,6 @@ class LookupManager:
         return str(result[0]) if result else ""
 
     def nodes(self, name: str) -> str:
-        print(name)
         self.con.execute(
             f"SELECT metadata.uid FROM nodes WHERE metadata.name = ?", [name]
         )
