@@ -303,26 +303,23 @@ def shared_commands(app: typer.Typer):
         typer.echo(f"Found {len(resource_files)} dynamic resources")
         return process_resources(resource_files, DynamicNode, ctx.obj)
 
-    # @app.command()
-    # def icons(ctx: typer.Context):
-    #     typer.echo(f"Found {len(KUBE_ICONS.keys())} custom icons")
-    #     for node_name, icon_name in KUBE_ICONS.items():
-    #         if node_name.startswith("AWS"):
-    #             node_icon = CustomNodeIcon(
-    #                 type="font-awesome", name=icon_name, color="#F4B942"
-    #             )
-    #         else:
-    #             node_icon = CustomNodeIcon(
-    #                 type="font-awesome", name=icon_name, color="#FFFFFF"
-    #             )
-    #         node_type = CustomNodeType(icon=node_icon)
-    #         custom_type = {"custom_types": {node_name: node_type}}
-    #         custom = CustomNode(**custom_type)
-    #         response = ctx.obj.session, ctx.obj["preview"].custom_node(
-    #             custom.model_dump_json()
-    #         )
-    #         print(response.json())
-    #     typer.echo("Synced custom icons with bloodhound")
+    @app.command()
+    def icons(ctx: typer.Context):
+        typer.echo(f"Found {len(KUBE_ICONS.keys())} custom icons")
+        for node_name, icon_name in KUBE_ICONS.items():
+            if node_name.startswith("AWS"):
+                node_icon = CustomNodeIcon(
+                    type="font-awesome", name=icon_name, color="#F4B942"
+                )
+            else:
+                node_icon = CustomNodeIcon(
+                    type="font-awesome", name=icon_name, color="#FFFFFF"
+                )
+            node_type = CustomNodeType(icon=node_icon)
+            custom_type = {"custom_types": {node_name: node_type}}
+            custom = CustomNode(**custom_type)
+            response = ctx.obj.session.custom_node(custom.model_dump_json())
+        typer.echo("Synced custom icons with bloodhound")
 
     @app.command()
     def all(ctx: typer.Context):
@@ -341,6 +338,7 @@ def shared_commands(app: typer.Typer):
             ("service_accounts", service_accounts),
             ("resource_definitions", resource_definitions),
             ("custom_resource_definitions", custom_resource_definitions),
+            ("icons", icons),
         ]
         for name, func in dump_functions:
             typer.echo(f"Syncing {name}…")
