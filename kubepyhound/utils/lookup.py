@@ -45,7 +45,7 @@ class LookupManager:
 
     def service_accounts(self, name: str, namespace: str) -> str:
         return self._find_uid(
-            f"SELECT metadata.uid FROM service_accounts WHERE metadata.name = ? AND metadata.namespace = ?",
+            f"SELECT metadata.uid FROM serviceaccounts WHERE metadata.name = ? AND metadata.namespace = ?",
             [name, namespace],
         )
 
