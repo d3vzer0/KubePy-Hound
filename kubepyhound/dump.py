@@ -85,7 +85,7 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
             resource="namespaces",
             namespace=None,
         )
-    workers.update(task_id, description="[green]Collecting namespaces: complete")
+    workers.update(task_id, description="Collecting namespaces: complete")
 
 
 @dump_app.command()
@@ -104,7 +104,7 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
             namespace=pod_object.metadata.namespace,
         )
 
-    workers.update(task_id, description="[green]Collecting pods: complete")
+    workers.update(task_id, description="Collecting pods: complete")
 
 
 @dump_app.command()
@@ -124,7 +124,7 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
             resource="nodes",
             namespace=None,
         )
-    workers.update(task_id, description="[green]Collecting ndoes: complete")
+    workers.update(task_id, description="Collecting ndoes: complete")
 
 
 @dump_app.command()
@@ -138,7 +138,7 @@ def cluster(ctx: typer.Context, output_dir: OutputPath):
         cluster_object, name="cluster", resource="cluster", namespace=None
     )
 
-    workers.update(task_id, description="[green]Collecting cluster: complete")
+    workers.update(task_id, description="Collecting cluster: complete")
 
 
 @dump_app.command()
@@ -165,7 +165,7 @@ def role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=roleb_object.metadata.namespace,
                 )
-    workers.update(task_id, description="[green]Collecting role-bindings: complete")
+    workers.update(task_id, description="Collecting role-bindings: complete")
 
 
 @dump_app.command()
@@ -187,7 +187,7 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
             resource="roles",
             namespace=role_object.metadata.namespace,
         )
-    workers.update(task_id, description="[green]Collecting roles: complete")
+    workers.update(task_id, description="Collecting roles: complete")
 
 
 @dump_app.command()
@@ -207,7 +207,7 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
             resource="cluster_roles",
             namespace=None,
         )
-    workers.update(task_id, description="[green]Collecting cluster roles: complete")
+    workers.update(task_id, description="Collecting cluster roles: complete")
 
 
 @dump_app.command()
@@ -235,9 +235,7 @@ def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=None,
                 )
-    workers.update(
-        task_id, description="[green]Collecting cluster role-bindings: complete"
-    )
+    workers.update(task_id, description="Collecting cluster role-bindings: complete")
 
 
 @dump_app.command()
@@ -260,7 +258,7 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
             resource="serviceaccounts",
             namespace=sa_object.metadata.namespace,
         )
-    workers.update(task_id, description="[green]Collecting service accounts: complete")
+    workers.update(task_id, description="Collecting service accounts: complete")
 
 
 @dump_app.command()
@@ -280,7 +278,7 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
             resource="endpoint_slices",
             namespace=es_object.metadata.namespace,
         )
-    workers.update(task_id, description="[green]Collecting endpoint slices: complete")
+    workers.update(task_id, description="Collecting endpoint slices: complete")
 
 
 @dump_app.command()
@@ -298,7 +296,7 @@ def services(ctx: typer.Context, output_dir: OutputPath):
             resource="services",
             namespace=service_object.metadata.namespace,
         )
-    workers.update(task_id, description="[green]Collecting services: complete")
+    workers.update(task_id, description="Collecting services: complete")
 
 
 @dump_app.command()
@@ -332,7 +330,7 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
                 resource="custom_resource_definitions",
                 namespace=None,
             )
-    workers.update(task_id, description="[green]Collecting CRDs: complete")
+    workers.update(task_id, description="Collecting CRDs: complete")
 
 
 @dump_app.command()
@@ -364,9 +362,7 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
 
-    workers.update(
-        task_id, description="[green]Collecting resource definitions: complete"
-    )
+    workers.update(task_id, description="Collecting resource definitions: complete")
 
 
 # @dump_app.command()
@@ -426,7 +422,7 @@ def all(ctx: typer.Context, output_dir: OutputPath):
     ]
 
     total_progress = progress.add_task(
-        f"[green]Collecting k8s resources", total=len(dump_functions)
+        f"[green] Collecting k8s resources", total=len(dump_functions)
     )
 
     for _, func in dump_functions:
