@@ -74,6 +74,7 @@ def main(
 def namespaces(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting namespaces...", total=None)
+    resource_count = 0
 
     v1 = client.CoreV1Api()
     namespaces = v1.list_namespace()
@@ -85,13 +86,17 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
             resource="namespaces",
             namespace=None,
         )
-    workers.update(task_id, description="Collecting namespaces: complete")
+        resource_count += 1
+    workers.update(
+        task_id, description=f"Collecting namespaces: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def pods(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting pods...", total=None)
+    resource_count = 0
 
     v1 = client.CoreV1Api()
     pods = v1.list_pod_for_all_namespaces()
@@ -103,14 +108,16 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
             resource="pods",
             namespace=pod_object.metadata.namespace,
         )
+        resource_count += 1
 
-    workers.update(task_id, description="Collecting pods: complete")
+    workers.update(task_id, description=f"Collecting pods: complete ({resource_count})")
 
 
 @dump_app.command()
 def nodes(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting nodes...", total=None)
+    resource_count = 0
 
     v1 = client.CoreV1Api()
     nodes = v1.list_node()
@@ -124,7 +131,10 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
             resource="nodes",
             namespace=None,
         )
-    workers.update(task_id, description="Collecting ndoes: complete")
+        resource_count += 1
+    workers.update(
+        task_id, description=f"Collecting ndoes: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
@@ -145,6 +155,7 @@ def cluster(ctx: typer.Context, output_dir: OutputPath):
 def role_bindings(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting role-bindings...", total=None)
+    resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
     rolebs = v1.list_role_binding_for_all_namespaces()
@@ -156,6 +167,7 @@ def role_bindings(ctx: typer.Context, output_dir: OutputPath):
             resource="role_bindings",
             namespace=roleb_object.metadata.namespace,
         )
+        resource_count += 1
         for subject in roleb_object.subjects:
             if subject.kind in ["User", "Group"]:
                 subject_object = IDENTITY_MAPPING[subject.kind](**subject.model_dump())
@@ -165,13 +177,16 @@ def role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=roleb_object.metadata.namespace,
                 )
-    workers.update(task_id, description="Collecting role-bindings: complete")
+    workers.update(
+        task_id, description=f"Collecting role-bindings: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def roles(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting roles...", total=None)
+    resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
     roles = v1.list_role_for_all_namespaces()
@@ -187,13 +202,17 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
             resource="roles",
             namespace=role_object.metadata.namespace,
         )
-    workers.update(task_id, description="Collecting roles: complete")
+        resource_count += 1
+    workers.update(
+        task_id, description=f"Collecting roles: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting cluster roles...", total=None)
+    resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
     roles = v1.list_cluster_role()
@@ -207,13 +226,17 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
             resource="cluster_roles",
             namespace=None,
         )
-    workers.update(task_id, description="Collecting cluster roles: complete")
+        resource_count += 1
+    workers.update(
+        task_id, description=f"Collecting cluster roles: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting cluster role-bindings...", total=None)
+    resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
     rolebs = v1.list_cluster_role_binding()
@@ -225,6 +248,7 @@ def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
             resource="cluster_role_bindings",
             namespace=None,
         )
+        resource_count += 1
 
         for subject in roleb_object.subjects:
             if subject.kind in ["User", "Group"]:
@@ -235,13 +259,17 @@ def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=None,
                 )
-    workers.update(task_id, description="Collecting cluster role-bindings: complete")
+    workers.update(
+        task_id,
+        description=f"Collecting cluster role-bindings: complete ({resource_count})",
+    )
 
 
 @dump_app.command()
 def service_accounts(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting service accounts...", total=None)
+    resource_count = 0
 
     v1 = client.CoreV1Api()
     service_accounts = v1.list_service_account_for_all_namespaces()
@@ -258,13 +286,17 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
             resource="serviceaccounts",
             namespace=sa_object.metadata.namespace,
         )
-    workers.update(task_id, description="Collecting service accounts: complete")
+        resource_count += 1
+    workers.update(
+        task_id, description=f"Collecting service accounts: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting endpoint slices...", total=None)
+    resource_count = 0
 
     v1 = client.DiscoveryV1Api()
     endpoint_slices = v1.list_endpoint_slice_for_all_namespaces()
@@ -278,13 +310,17 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
             resource="endpoint_slices",
             namespace=es_object.metadata.namespace,
         )
-    workers.update(task_id, description="Collecting endpoint slices: complete")
+        resource_count += 1
+    workers.update(
+        task_id, description=f"Collecting endpoint slices: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def services(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting services...", total=None)
+    resource_count = 0
 
     v1 = client.CoreV1Api()
     services = v1.list_service_for_all_namespaces()
@@ -296,18 +332,24 @@ def services(ctx: typer.Context, output_dir: OutputPath):
             resource="services",
             namespace=service_object.metadata.namespace,
         )
-    workers.update(task_id, description="Collecting services: complete")
+        resource_count += 1
+
+    workers.update(
+        task_id, description=f"Collecting services: complete ({resource_count})"
+    )
 
 
 @dump_app.command()
 def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting CRDs...", total=None)
+    resource_count = 0
 
     api = client.ApisApi()
     custom = client.CustomObjectsApi()
 
     groups = api.get_api_versions()
+
     for group in groups.groups:
         group_object = ResourceGroup(**group.to_dict())
         dump_client.write(
@@ -330,13 +372,16 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
                 resource="custom_resource_definitions",
                 namespace=None,
             )
-    workers.update(task_id, description="Collecting CRDs: complete")
+            resource_count += 1
+
+    workers.update(task_id, description=f"Collecting CRDs: complete ({resource_count})")
 
 
 @dump_app.command()
 def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj["dump_client"]
     task_id = workers.add_task("Collecting resource definitions...", total=None)
+    resource_count = 0
 
     v1 = client.CoreV1Api()
     core_resources = v1.get_api_resources()
@@ -361,8 +406,12 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
             resource="resource_definitions",
             namespace=None,
         )
+        resource_count += 1
 
-    workers.update(task_id, description="Collecting resource definitions: complete")
+    workers.update(
+        task_id,
+        description=f"Collecting resource definitions: complete ({resource_count})",
+    )
 
 
 # @dump_app.command()
