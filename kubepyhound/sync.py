@@ -342,7 +342,7 @@ def shared_commands(app: typer.Typer):
             ("service_accounts", service_accounts),
             ("resource_definitions", resource_definitions),
             ("custom_resource_definitions", custom_resource_definitions),
-            ("icons", icons),
+            # ("icons", icons),
         ]
 
         total_progress = progress.add_task(
