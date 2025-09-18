@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from kubepyhound.utils.guid import get_guid
 from datetime import datetime
+from kubepyhound.utils.lookup import LookupManager
 
 
 class SourceRef(BaseModel):
@@ -60,6 +61,7 @@ class Node(BaseModel, ABC):
     _stale_collection: StaleReferenceCollector = PrivateAttr(
         default_factory=StaleReferenceCollector
     )
+    _lookup: LookupManager = PrivateAttr()
 
     @classmethod
     @abstractmethod
@@ -68,6 +70,10 @@ class Node(BaseModel, ABC):
     @property
     @abstractmethod
     def edges(self) -> list["Edge"]: ...
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.lookup = Field(exclude=True)
 
 
 class EdgePath(BaseModel):

@@ -1,7 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, BeforeValidator
 from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
-from kubepyhound.models import lookups
 from typing import Optional, Any, TypeVar, Annotated
 from pydantic_core import PydanticUseDefault
 
@@ -65,7 +64,7 @@ class PodNode(Node):
 
     @property
     def _namespace_edge(self):
-        target_id = lookups.namespaces(self.properties.namespace)
+        target_id = self._lookup.namespaces(self.properties.namespace)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
@@ -73,7 +72,7 @@ class PodNode(Node):
 
     @property
     def _node_edge(self):
-        target_id = lookups.nodes(self.properties.node_name)
+        target_id = self._lookup.nodes(self.properties.node_name)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sRunsOn", start=start_path, end=end_path)
@@ -81,7 +80,7 @@ class PodNode(Node):
 
     @property
     def _service_account_edge(self):
-        target_id = lookups.service_accounts(
+        target_id = self._lookup.service_accounts(
             self.properties.namespace, self.properties.service_account_name
         )
         start_path = EdgePath(value=self.id, match_by="id")

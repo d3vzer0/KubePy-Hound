@@ -20,7 +20,7 @@ class NodeOutput(GraphNode):
 
     @property
     def _authenticated_group_edge(self):
-        target_id = lookups.groups("system:authenticated")
+        target_id = self._lookup.groups("system:authenticated")
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
@@ -28,7 +28,7 @@ class NodeOutput(GraphNode):
 
     @property
     def _nodes_group_edge(self):
-        target_id = lookups.groups("system:nodes")
+        target_id = self._lookup.groups("system:nodes")
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
@@ -37,7 +37,7 @@ class NodeOutput(GraphNode):
     @property
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by="id")
-        end_path = EdgePath(value=lookups.cluster["uid"], match_by="id")
+        end_path = EdgePath(value=self._lookup.cluster["uid"], match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 

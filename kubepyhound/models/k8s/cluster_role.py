@@ -94,7 +94,7 @@ class ClusterRoleNode(Node):
     @property
     def _cluster_edge(self):
         start_path = EdgePath(value=self.id, match_by="id")
-        end_path = EdgePath(value=lookups.cluster["uid"], match_by="id")
+        end_path = EdgePath(value=self._lookup.cluster["uid"], match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 
@@ -114,10 +114,13 @@ class ClusterRoleNode(Node):
             for target_group in rule.api_groups:
                 if rule.resources:
                     resources = (
-                        [lookups.resource_definitions(rule) for rule in rule.resources]
+                        [
+                            self._lookup.resource_definitions(rule)
+                            for rule in rule.resources
+                        ]
                         if target_group == "__core__"
                         else [
-                            lookups.custom_resource_definitions(rule)
+                            self._lookup.custom_resource_definitions(rule)
                             for rule in rule.resources
                         ]
                     )

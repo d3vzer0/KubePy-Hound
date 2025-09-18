@@ -24,7 +24,7 @@ class IAMUserNode(Node):
 
     @property
     def _authenticated_group_edge(self):
-        target_id = lookups.groups["system:authenticated"]
+        target_id = self._lookup.groups["system:authenticated"]
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="MEMBER_OF", start=start_path, end=end_path)
@@ -35,8 +35,8 @@ class IAMUserNode(Node):
         groups = []
         start_path = EdgePath(value=self.id, match_by="id")
         for group in self.properties.groups:
-            if group in lookups.groups:
-                target_id = lookups.groups[group]
+            if group in self._lookup.groups:
+                target_id = self._lookup.groups[group]
                 end_path = EdgePath(value=target_id, match_by="id")
                 edge = Edge(kind="MEMBER_OF", start=start_path, end=end_path)
                 groups.append(edge)

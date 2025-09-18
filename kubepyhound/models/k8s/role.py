@@ -98,7 +98,7 @@ class RoleNode(Node):
 
     @property
     def _namespace_edge(self):
-        target_id = lookups.namespaces(self.properties.namespace)
+        target_id = self._lookup.namespaces(self.properties.namespace)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
@@ -109,10 +109,11 @@ class RoleNode(Node):
         start_path = EdgePath(value=self.id, match_by="id")
         for target_group in rule.api_groups:
             resources = (
-                [lookups.resource_definitions(rule) for rule in rule.resources]
+                [self._lookup.resource_definitions(rule) for rule in rule.resources]
                 if target_group == "__core__"
                 else [
-                    lookups.custom_resource_definitions(rule) for rule in rule.resources
+                    self._lookup.custom_resource_definitions(rule)
+                    for rule in rule.resources
                 ]
             )
             for resource in resources:

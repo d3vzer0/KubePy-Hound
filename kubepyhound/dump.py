@@ -24,6 +24,7 @@ from pathlib import Path
 from rich.progress import Progress, SpinnerColumn, TextColumn
 import duckdb
 import typer
+import glob
 from enum import Enum
 
 dump_app = typer.Typer()
@@ -133,7 +134,7 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
         )
         resource_count += 1
     workers.update(
-        task_id, description=f"Collecting ndoes: complete ({resource_count})"
+        task_id, description=f"Collecting nodes: complete ({resource_count})"
     )
 
 
@@ -446,10 +447,25 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 
 
 @dump_app.command()
-def populate_db():
-    typer.echo("Populating local duckdb with values for k8s lookups")
-    lookups.bootstrap()
-    typer.echo("Finsihed populating duckdb")
+def bootstrap(
+    queries_path: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=True,
+            dir_okay=True,
+            readable=True,
+            resolve_path=True,
+        ),
+    ] = Path("kubepyhound/duckdb/tables"),
+):
+    bootstrap_files = glob.glob(f"{queries_path}/*.sql")
+    con = duckdb.connect(database="k8s.duckdb", read_only=False)
+    for query in bootstrap_files:
+        with open(query, "r") as query_file:
+            sql_content = query_file.read()
+            con.execute(sql_content)
+    con.close()
 
 
 @dump_app.command()

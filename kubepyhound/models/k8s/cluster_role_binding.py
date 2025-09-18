@@ -60,14 +60,14 @@ class ClusterRoleBindingNode(Node):
 
     @property
     def _role_edge(self):
-        target_id = lookups.cluster_roles(self.properties.role_ref)
+        target_id = self._lookup.cluster_roles(self.properties.role_ref)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sReferencesRole", start=start_path, end=end_path)
         return edge
 
     def _service_account(self, start_path, target, namespace):
-        target_id = lookups.service_accounts(target.name, namespace)
+        target_id = self._lookup.service_accounts(target.name, namespace)
         if not target_id:
             source_ref = SourceRef(name=self.properties.name, uid=self.id)
             self._stale_collection.add(
@@ -85,11 +85,11 @@ class ClusterRoleBindingNode(Node):
             return Edge(kind="K8sAuthorizes", start=start_path, end=end_path)
 
     def _get_target_user(self, target_name: str) -> "EdgePath":
-        target_id = lookups.users(target_name)
+        target_id = self._lookup.users(target_name)
         return EdgePath(value=target_id, match_by="id")
 
     def _get_target_group(self, target_name: str) -> "EdgePath":
-        target_id = lookups.groups(target_name)
+        target_id = self._lookup.groups(target_name)
         return EdgePath(value=target_id, match_by="id")
 
     @property
@@ -99,7 +99,7 @@ class ClusterRoleBindingNode(Node):
         for target in self.properties.subjects:
             if target.kind == "ServiceAccount":
                 namespace = target.namespace
-                # if namespace in lookups.service_accounts:
+                # if namespace in self._lookup.service_accounts:
                 get_service_account_edge = self._service_account(
                     start_path, target, namespace
                 )

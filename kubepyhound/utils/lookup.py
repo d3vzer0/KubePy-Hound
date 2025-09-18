@@ -1,7 +1,10 @@
 import json
 import os
-from typing import Dict, Any, Optional
 import duckdb
+from duckdb import DuckDBPyConnection
+import glob
+from typing import Dict, Any, Optional
+from pathlib import Path
 
 
 class LookupManager:
@@ -10,7 +13,10 @@ class LookupManager:
         self.directory = directory
         self._cluster: Optional[Dict] = None
         self.db = "data"
-        self.con = duckdb.connect(database="k8s.duckdb", read_only=False)
+        # self.con: DuckDBPyConnection = duckdb.connect(
+        #     database="k8s.duckdb", read_only=False
+        # )
+        self.con: DuckDBPyConnection = duckdb.connect()
 
     def _load_json(self, filename: str) -> Dict[str, Any]:
         filepath = os.path.join(self.directory, filename)
@@ -72,136 +78,13 @@ class LookupManager:
     def groups(self, name: str) -> str:
         return self._find_uid(f"SELECT uid FROM groups WHERE name = ?", [name])
 
-    def bootstrap(self) -> None:
-        populate_db = [
-            """CREATE TABLE IF NOT EXISTS nodes AS SELECT * FROM read_json(
-                'output/nodes/*.json',
-                columns = {
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS pods AS SELECT * FROM read_json(
-                'output/namespaces/**/pods/*.json',
-                columns = {
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, namespace VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    spec: 'STRUCT(node_name VARCHAR, service_account_name VARCHAR, containers STRUCT(image VARCHAR, security_context STRUCT(allow_privilege_escalation BOOLEAN, privileged BOOLEAN), volume_mounts STRUCT(mount_path VARCHAR, name VARCHAR)[])[])'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS services AS SELECT * FROM read_json(
-                'output/namespaces/**/services/*.json',
-                columns = {
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, namespace VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    spec: 'STRUCT(type VARCHAR, selector MAP(VARCHAR, VARCHAR))'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS serviceaccounts AS SELECT * FROM read_json(
-                'output/namespaces/**/serviceaccounts/*.json',
-                columns = {
-                    kind: 'VARCHAR',
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, namespace VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    automount_service_account_token: 'BOOLEAN',
-                    secrets: 'STRUCT(name VARCHAR)[]',
-                    exists: 'BOOLEAN'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS roles AS SELECT * FROM read_json(
-                'output/namespaces/**/roles/*.json',
-                columns = {
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, namespace VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    rules: 'STRUCT(api_groups VARCHAR[], resources VARCHAR[], verbs VARCHAR[], resource_names VARCHAR[])[]'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS role_bindings AS SELECT * FROM read_json(
-                'output/namespaces/**/role_bindings/*.json',
-                columns = {
-                    kind: 'VARCHAR',
-                    subjects: 'STRUCT(api_group VARCHAR, kind VARCHAR, name VARCHAR, namespace VARCHAR)[]',
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, namespace VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    role_ref: 'STRUCT(api_group VARCHAR, kind VARCHAR, name VARCHAR)'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS cluster_role_bindings AS SELECT * FROM read_json(
-                'output/cluster_role_bindings/*.json',
-                columns = {
-                    kind: 'VARCHAR',
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    role_ref: 'STRUCT(api_group VARCHAR, kind VARCHAR, name VARCHAR)',
-                    subjects: 'STRUCT(api_group VARCHAR, kind VARCHAR, name VARCHAR, namespace VARCHAR)[]'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS cluster_roles AS SELECT * FROM read_json(
-                'output/cluster_roles/*.json',
-                columns = {
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))',
-                    rules: 'STRUCT(api_groups VARCHAR[], resources VARCHAR[], verbs VARCHAR[], resource_names VARCHAR[])[]'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS groups AS SELECT * FROM read_json(
-                'output/group/*.json',
-                columns = {
-                    name: 'VARCHAR',
-                    api_group: 'VARCHAR',
-                    uid: 'VARCHAR',
-                    members: 'VARCHAR[]'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS users AS SELECT * FROM read_json(
-                'output/user/*.json',
-                columns = {
-                    name: 'VARCHAR',
-                    api_group: 'VARCHAR',
-                    uid: 'VARCHAR',
-                    groups: 'VARCHAR[]'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS namespaces AS SELECT * FROM read_json(
-                'output/namespaces/*.json',
-                columns = {
-                    metadata: 'STRUCT(name VARCHAR, uid VARCHAR, creation_timestamp VARCHAR, labels MAP(VARCHAR, VARCHAR))'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS resource_definitions AS SELECT * FROM read_json(
-                'output/resource_definitions/**/*.json',
-                columns = {
-                    name: 'VARCHAR',
-                    categories: 'VARCHAR[]',
-                    kind: 'VARCHAR',
-                    'group': 'VARCHAR',
-                    singular_name: 'VARCHAR',
-                    namespaced: 'BOOLEAN',
-                    uid: 'VARCHAR',
-                    api_group_name: 'VARCHAR',
-                    api_group_uid: 'VARCHAR'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS custom_resource_definitions AS SELECT * FROM read_json(
-                'output/custom_resource_definitions/**/*.json',
-                columns = {
-                    name: 'VARCHAR',
-                    categories: 'VARCHAR[]',
-                    kind: 'VARCHAR',
-                    'group': 'VARCHAR',
-                    singular_name: 'VARCHAR',
-                    namespaced: 'BOOLEAN',
-                    uid: 'VARCHAR',
-                    api_group_name: 'VARCHAR',
-                    api_group_uid: 'VARCHAR'
-                }
-            );""",
-            """CREATE TABLE IF NOT EXISTS api_groups AS SELECT * FROM read_json(
-                'output/api_groups/*.json',
-                columns = {
-                    name: 'VARCHAR',
-                    api_version: 'VARCHAR',
-                    preferred_version: 'STRUCT(group_version VARCHAR, version VARCHAR)',
-                    versions: 'STRUCT(group_version VARCHAR, version VARCHAR)[]',
-                    uid: 'VARCHAR'
-                }
-            );""",
-        ]
-
-        for query in populate_db:
-            self.con.execute(query)
+    def bootstrap(self, query_path: Path) -> None:
+        bootstrap_files = glob.glob(f"{query_path}/*.sql")
+        for query in bootstrap_files:
+            with open(query, "r") as query_file:
+                sql_content = query_file.read()
+                self.con.execute(sql_content)
+        self.con.close()
 
     @property
     def cluster(self) -> Dict[str, Any]:
