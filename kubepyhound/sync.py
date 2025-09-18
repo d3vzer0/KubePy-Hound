@@ -25,6 +25,9 @@ from typing import Type, TypeVar
 import glob
 import typer
 from kubepyhound.utils.api import BloodHound
+from kubepyhound.utils.lookup import LookupManager
+import duckdb
+
 
 T = TypeVar("T", bound=GraphNode)
 E = TypeVar("E", bound=GraphEntries)
@@ -61,6 +64,7 @@ progress.start()
 class SyncOptions:
     input: Path
     session: BloodHound
+    lookup: LookupManager
     job_id: int | None = None
     mode: str = "sync"
 
@@ -69,23 +73,26 @@ class SyncOptions:
 class ConvertOptions:
     input: Path
     output: Path
+    lookup: LookupManager
     mode: str = "convert"
 
 
 class ResourceGraph:
-    def __init__(self, files: list[str], model_class: Type[T]):
+    def __init__(self, files: list[str], model_class: Type[T], lookup: LookupManager):
         self.files = files
         self.model_class = model_class
         self.task = progress.add_task(
             f"Converting {len(self.files)} {self.model_class.__name__}s",
             total=len(self.files),
         )
+        self.lookup = lookup
 
     @property
     def graph(self) -> Graph:
         graph_entries = GraphEntries()
         for resource in self.files:
             node = self.model_class.from_input(**load_json(resource))
+            node._lookup = self.lookup
             graph_entries.nodes.append(node)
             for edge in node.edges:
                 graph_entries.edges.append(edge)
@@ -112,7 +119,9 @@ def process_resources(
     model_class: Type[T],
     options: ConvertOptions | SyncOptions,
 ):
-    graph = ResourceGraph(files=resource_files, model_class=model_class)
+    graph = ResourceGraph(
+        files=resource_files, model_class=model_class, lookup=options.lookup
+    )
     if len(resource_files) > 0:
 
         # TODO: This can probably be done more... more pythonic
@@ -142,8 +151,11 @@ def sync_callback(
     token_id: Annotated[str, typer.Option(envvar="BHE_API_ID")],
     token_key: Annotated[str, typer.Option(envvar="BHE_API_KEY")],
 ):
+    print("test")
+    lookup = LookupManager()
+    lookup.con = duckdb.connect(database="k8s.duckdb", read_only=False)
     session = BloodHound(token_id=token_id, token_key=token_key, bhe_uri=bhe_uri)
-    ctx.obj = SyncOptions(input, session)
+    ctx.obj = SyncOptions(input, session, lookup=lookup)
 
 
 @convert_app.callback()
@@ -172,7 +184,9 @@ def convert_callback(
         ),
     ],
 ):
-    ctx.obj = ConvertOptions(input, output=output)
+    lookup = LookupManager()
+    lookup.con = duckdb.connect(database="k8s.duckdb", read_only=False)
+    ctx.obj = ConvertOptions(input, output=output, lookup=lookup)
 
 
 def shared_commands(app: typer.Typer):

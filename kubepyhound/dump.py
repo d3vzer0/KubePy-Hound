@@ -122,10 +122,8 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.CoreV1Api()
     nodes = v1.list_node()
-    kv_lookup = {}
     for node in nodes.items:
         node_object = Node(**node.to_dict())
-        kv_lookup[node_object.metadata.name] = node_object.metadata.uid
         dump_client.write(
             node_object,
             name=node_object.metadata.name,
@@ -191,12 +189,8 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.RbacAuthorizationV1Api()
     roles = v1.list_role_for_all_namespaces()
-    kv_lookup = defaultdict(dict)
     for role in roles.items:
         role_object = Role(**role.to_dict())
-        kv_lookup[role_object.metadata.namespace][
-            role_object.metadata.name
-        ] = role_object.metadata.uid
         dump_client.write(
             role_object,
             name=role_object.metadata.name,
@@ -217,10 +211,8 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.RbacAuthorizationV1Api()
     roles = v1.list_cluster_role()
-    kv_lookup: dict[str, str] = {}
     for role in roles.items:
         role_object = ClusterRole(**role.to_dict())
-        kv_lookup[role_object.metadata.name] = role_object.metadata.uid
         dump_client.write(
             role_object,
             name=role_object.metadata.name,
@@ -274,13 +266,8 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.CoreV1Api()
     service_accounts = v1.list_service_account_for_all_namespaces()
-    kv_lookup = defaultdict(dict)
-
     for service_account in service_accounts.items:
         sa_object = ServiceAccount(**service_account.to_dict())
-        kv_lookup[sa_object.metadata.namespace][
-            sa_object.metadata.name
-        ] = sa_object.metadata.uid
         dump_client.write(
             sa_object,
             name=sa_object.metadata.name,
@@ -301,10 +288,8 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.DiscoveryV1Api()
     endpoint_slices = v1.list_endpoint_slice_for_all_namespaces()
-    kv_lookup = defaultdict(list)
     for es in endpoint_slices.items:
         es_object = EndpointSlice(**es.to_dict())
-        kv_lookup[es_object.metadata.labels.service_name].append(es_object.metadata.uid)
         dump_client.write(
             es_object,
             name=es_object.metadata.name,
