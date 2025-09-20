@@ -18,29 +18,34 @@ from kubepyhound.models.eks.user import IAMUser
 from kubepyhound.utils.helpers import DumpClient
 from kubepyhound.utils.mapper import NamespaceResourceMapper
 from kubepyhound.models.k8s.service_account import ServiceAccount
-from kubepyhound.models import lookups
-from collections import defaultdict
 from pathlib import Path
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 import duckdb
 import typer
 import glob
 from enum import Enum
+from dataclasses import dataclass
+from rich.console import Console
+from functools import wraps
 
-dump_app = typer.Typer()
-progress = Progress(
-    transient=True,
-)
-workers = Progress(
-    SpinnerColumn(),
-    TextColumn("{task.description}"),
-    transient=True,
-)
 
-progress.start()
-workers.start()
+IDENTITY_MAPPING = {"User": User, "Group": Group}
 
-config.load_kube_config()
+
+@dataclass
+class Options:
+    client: DumpClient
+
+
+class OutputFormat(str, Enum):
+    simple = "simple"
+    ndjson = "ndjson"
+
 
 OutputPath = Annotated[
     Path,
@@ -49,13 +54,8 @@ OutputPath = Annotated[
     ),
 ]
 
-
-class OutputFormat(str, Enum):
-    simple = "simple"
-    ndjson = "ndjson"
-
-
-IDENTITY_MAPPING = {"User": User, "Group": Group}
+dump_app = typer.Typer()
+config.load_kube_config()
 
 
 @dump_app.callback()
@@ -65,16 +65,42 @@ def main(
         OutputFormat.simple, "--format", case_sensitive=False
     ),
 ):
-    ctx.ensure_object(dict)
-    ctx.obj["dump_client"] = DumpClient(
-        base_dir=Path("./output"), mode=output_format.value
+    ctx.obj = Options(
+        client=DumpClient(base_dir=Path("./output"), mode=output_format.value)
     )
+
+
+def progress_handler(task_name: str):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(ctx: typer.Context, *args, **kwargs):
+            console = Console()
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("{task.description}"),
+                TimeElapsedColumn(),
+                transient=False,
+                console=console,
+            ) as task_progress:
+                task_id = task_progress.add_task(
+                    f"Collecting {task_name}...", total=None
+                )
+                result = func(ctx, *args, **kwargs)
+                task_progress.update(
+                    task_id,
+                    description=f"Collecting {task_name}: complete ({result})",
+                    refresh=True,
+                )
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 @dump_app.command()
 def namespaces(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting namespaces...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.CoreV1Api()
@@ -88,15 +114,13 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
         resource_count += 1
-    workers.update(
-        task_id, description=f"Collecting namespaces: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("pods")
 def pods(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting pods...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.CoreV1Api()
@@ -111,13 +135,13 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
         )
         resource_count += 1
 
-    workers.update(task_id, description=f"Collecting pods: complete ({resource_count})")
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("nodes")
 def nodes(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting nodes...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.CoreV1Api()
@@ -131,29 +155,25 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
         resource_count += 1
-    workers.update(
-        task_id, description=f"Collecting nodes: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("cluster")
 def cluster(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting cluster...", total=None)
-
+    dump_client: DumpClient = ctx.obj.client
     conf = config.list_kube_config_contexts()[1]
     cluster_object = Cluster(name=conf["context"]["cluster"])
     dump_client.write(
         cluster_object, name="cluster", resource="cluster", namespace=None
     )
-
-    workers.update(task_id, description="Collecting cluster: complete")
+    return 1
 
 
 @dump_app.command()
+@progress_handler("role-bindings")
 def role_bindings(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting role-bindings...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
@@ -176,15 +196,13 @@ def role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=roleb_object.metadata.namespace,
                 )
-    workers.update(
-        task_id, description=f"Collecting role-bindings: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("roles")
 def roles(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting roles...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
@@ -198,15 +216,13 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
             namespace=role_object.metadata.namespace,
         )
         resource_count += 1
-    workers.update(
-        task_id, description=f"Collecting roles: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("cluster-roles")
 def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting cluster roles...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
@@ -220,15 +236,13 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
         resource_count += 1
-    workers.update(
-        task_id, description=f"Collecting cluster roles: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("cluster role-bindings")
 def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting cluster role-bindings...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.RbacAuthorizationV1Api()
@@ -252,16 +266,13 @@ def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
                     resource=subject.kind.lower(),
                     namespace=None,
                 )
-    workers.update(
-        task_id,
-        description=f"Collecting cluster role-bindings: complete ({resource_count})",
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("service accounts")
 def service_accounts(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting service accounts...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.CoreV1Api()
@@ -275,15 +286,13 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
             namespace=sa_object.metadata.namespace,
         )
         resource_count += 1
-    workers.update(
-        task_id, description=f"Collecting service accounts: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("endpoint slices")
 def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting endpoint slices...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.DiscoveryV1Api()
@@ -297,15 +306,13 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
             namespace=es_object.metadata.namespace,
         )
         resource_count += 1
-    workers.update(
-        task_id, description=f"Collecting endpoint slices: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("services")
 def services(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting services...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.CoreV1Api()
@@ -319,16 +326,13 @@ def services(ctx: typer.Context, output_dir: OutputPath):
             namespace=service_object.metadata.namespace,
         )
         resource_count += 1
-
-    workers.update(
-        task_id, description=f"Collecting services: complete ({resource_count})"
-    )
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("custom resource definitions")
 def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting CRDs...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     api = client.ApisApi()
@@ -360,13 +364,13 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
             )
             resource_count += 1
 
-    workers.update(task_id, description=f"Collecting CRDs: complete ({resource_count})")
+    return resource_count
 
 
 @dump_app.command()
+@progress_handler("resource definitions")
 def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
-    dump_client: DumpClient = ctx.obj["dump_client"]
-    task_id = workers.add_task("Collecting resource definitions...", total=None)
+    dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
     v1 = client.CoreV1Api()
@@ -393,11 +397,7 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
             namespace=None,
         )
         resource_count += 1
-
-    workers.update(
-        task_id,
-        description=f"Collecting resource definitions: complete ({resource_count})",
-    )
+    return resource_count
 
 
 # @dump_app.command()
@@ -471,13 +471,5 @@ def all(ctx: typer.Context, output_dir: OutputPath):
         ("custom_resource_definitions", custom_resource_definitions),
     ]
 
-    total_progress = progress.add_task(
-        f"[green] Collecting k8s resources", total=len(dump_functions)
-    )
-
     for _, func in dump_functions:
-        progress.advance(total_progress)
         ctx.invoke(func, ctx, output_dir=output_dir)
-
-    progress.stop()
-    workers.stop()
