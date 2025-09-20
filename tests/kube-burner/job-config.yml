@@ -1,0 +1,29 @@
+global:
+  gc: false
+
+jobs:
+  - name: scale-test
+    namespace: kube-burner-ns
+    qps: 50                  
+    burst: 100
+    namespacedIterations: true
+    jobIterations: 20 # 20 namespaces
+    podWait: false
+    waitWhenFinished: true
+    cleanup: true
+    objects:
+      - objectTemplate: templates/namespace.yml
+        replicas: 1 # Amount of namespaces is specified by jobIterations + namespacedIterations
+
+      - objectTemplate: templates/serviceaccount.yml
+        replicas: 5
+
+      - objectTemplate: templates/role.yml
+        replicas: 5
+  
+      - objectTemplate: templates/rolebinding.yml
+        replicas: 5
+
+      # 10 deployments * 10 replicates = 100 pods per namespace
+      - objectTemplate: templates/deployment.yml
+        replicas: 10

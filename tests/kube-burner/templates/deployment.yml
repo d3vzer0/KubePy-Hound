@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploy-{{ .Replica }}-{{ .Iteration }}
+  namespace: ns-{{ .Iteration }}
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: pause-{{ .Replica }}-{{ .Iteration }}
+  template:
+    metadata:
+      labels:
+        app: pause-{{ .Replica }}-{{ .Iteration }}
+    spec:
+      serviceAccountName: sa-1-{{ .Iteration }}
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 5m
+            memory: 5Mi
+          limits:
+            cpu: 10m
+            memory: 10Mi
