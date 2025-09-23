@@ -56,8 +56,8 @@ KUBE_ICONS = {
 sync_app = typer.Typer()
 convert_app = typer.Typer()
 
-progress = Progress()
-progress.start()
+# progress = Progress()
+# progress.start()
 
 
 @dataclass
@@ -90,30 +90,31 @@ class ResourceGraph:
         self.files = files
         self.model_class = model_class
         self.cluster = cluster
-        self.task = progress.add_task(
-            f"Converting {len(self.files)} {self.model_class.__name__}s",
-            total=len(self.files),
-        )
+
         self.lookup = lookup
 
     @property
     def graph(self) -> Graph:
         graph_entries = GraphEntries()
-        for resource in self.files:
-            node = self.model_class.from_input(**load_json(resource))
-            node._lookup = self.lookup
-            node._cluster = self.cluster
-            graph_entries.nodes.append(node)
-            for edge in node.edges:
-                graph_entries.edges.append(edge)
-            progress.update(self.task)
-            progress.advance(self.task)
+        with Progress() as progress:
+            task = progress.add_task(
+                f"Converting {len(self.files)} {self.model_class.__name__}s",
+                total=len(self.files),
+            )
+            for resource in self.files:
+                node = self.model_class.from_input(**load_json(resource))
+                node._lookup = self.lookup
+                node._cluster = self.cluster
+                graph_entries.nodes.append(node)
+                for edge in node.edges:
+                    graph_entries.edges.append(edge)
+                progress.update(task)
+                progress.advance(task)
         return Graph(graph=graph_entries)
 
     def to_file(self, output_path: Path) -> None:
         with open(output_path, "w") as outputfile:
             outputfile.write(self.graph.model_dump_json(exclude_unset=False, indent=2))
-            typer.echo(f"Generated graph as {output_path}")
 
     def to_bloodhound(self, session: BloodHound, ctx: SyncOptions) -> None:
         if not ctx.job_id:
@@ -211,19 +212,16 @@ def shared_commands(app: typer.Typer):
     @app.command()
     def cluster(ctx: typer.Context):
         resource_files = glob.glob(f"{ctx.obj.input}/cluster/*.json", recursive=True)
-        # typer.echo(f"Found {len(resource_files)} cluster")
         return process_resources(resource_files, ClusterNode, ctx.obj)
 
     @app.command()
     def namespaces(ctx: typer.Context):
         resource_files = glob.glob(f"{ctx.obj.input}/namespaces/*.json", recursive=True)
-        # typer.echo(f"Found {len(resource_files)} namespaces")
         return process_resources(resource_files, NamespaceNode, ctx.obj)
 
     @app.command()
     def nodes(ctx: typer.Context):
         resource_files = glob.glob(f"{ctx.obj.input}/nodes/*.json", recursive=True)
-        # typer.echo(f"Found {len(resource_files)} nodes")
         return process_resources(resource_files, NodeOutput, ctx.obj)
 
     @app.command()
@@ -231,7 +229,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/namespaces/**/pods/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} pods")
         return process_resources(resource_files, PodNode, ctx.obj)
 
     @app.command()
@@ -239,7 +236,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/namespaces/**/roles/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} roles")
         return process_resources(resource_files, RoleNode, ctx.obj)
 
     @app.command()
@@ -249,7 +245,6 @@ def shared_commands(app: typer.Typer):
             f"{ctx.obj.input}/namespaces/**/role_bindings/*.json",
             recursive=True,
         )
-        # typer.echo(f"Found {len(resource_files)} rolebindings")
         return process_resources(resource_files, RoleBindingNode, ctx.obj)
 
     @app.command()
@@ -257,7 +252,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/cluster_roles/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} cluster roles")
         return process_resources(resource_files, ClusterRoleNode, ctx.obj)
 
     @app.command()
@@ -266,7 +260,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/cluster_role_bindings/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} cluster rolebindings")
         return process_resources(resource_files, ClusterRoleBindingNode, ctx.obj)
 
     @app.command()
@@ -274,7 +267,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/stale_objects/**/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} stale resources")
         return process_resources(resource_files, StaleNode, ctx.obj)
 
     @app.command()
@@ -282,7 +274,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/api_groups/**/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} resource groups")
         return process_resources(resource_files, ResourceGroupNode, ctx.obj)
 
     @app.command()
@@ -291,7 +282,6 @@ def shared_commands(app: typer.Typer):
             f"{ctx.obj.input}/custom_resource_definitions/**/*.json",
             recursive=True,
         )
-        # typer.echo(f"Found {len(resource_files)} custom resources")
         return process_resources(resource_files, CustomResourceNode, ctx.obj)
 
     @app.command()
@@ -299,7 +289,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/resource_definitions/**/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} core resources")
         return process_resources(resource_files, ResourceNode, ctx.obj)
 
     @app.command()
@@ -308,19 +297,16 @@ def shared_commands(app: typer.Typer):
             f"{ctx.obj.input}/namespaces/**/serviceaccounts/*.json",
             recursive=True,
         )
-        # typer.echo(f"Found {len(resource_files)} service accounts")
         return process_resources(resource_files, ServiceAccountNode, ctx.obj)
 
     @app.command()
     def groups(ctx: typer.Context):
         resource_files = glob.glob(f"{ctx.obj.input}/group/*.json", recursive=True)
-        # typer.echo(f"Found {len(resource_files)} external groups")
         return process_resources(resource_files, GroupNode, ctx.obj)
 
     @app.command()
     def users(ctx: typer.Context):
         resource_files = glob.glob(f"{ctx.obj.input}/user/*.json", recursive=True)
-        # typer.echo(f"Found {len(resource_files)} external users")
         return process_resources(resource_files, UserNode, ctx.obj)
 
     @app.command()
@@ -328,7 +314,6 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/identities/aws/**/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} AWS IAM identities")
         return process_resources(resource_files, IAMUserNode, ctx.obj)
 
     @app.command()
@@ -336,12 +321,10 @@ def shared_commands(app: typer.Typer):
         resource_files = glob.glob(
             f"{ctx.obj.input}/namespaces/**/dynamic/*.json", recursive=True
         )
-        # typer.echo(f"Found {len(resource_files)} dynamic resources")
         return process_resources(resource_files, DynamicNode, ctx.obj)
 
     @app.command()
     def icons(ctx: typer.Context):
-        # typer.echo(f"Found {len(KUBE_ICONS.keys())} custom icons")
         for node_name, icon_name in KUBE_ICONS.items():
             if node_name.startswith("AWS"):
                 node_icon = CustomNodeIcon(
@@ -377,11 +360,11 @@ def shared_commands(app: typer.Typer):
             # ("icons", icons),
         ]
 
-        total_progress = progress.add_task(
-            f"[green]Converting resources to OpenGraph", total=len(sync_functions)
-        )
+        # total_progress = progress.add_task(
+        #     f"[green]Converting resources to OpenGraph", total=len(sync_functions)
+        # )
         for _, func in sync_functions:
-            progress.advance(total_progress)
+            # progress.advance(total_progress)
             ctx.invoke(func, ctx)
 
-        progress.stop()
+        # progress.stop()
