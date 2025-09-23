@@ -9,6 +9,7 @@ from kubepyhound.models.entries import (
     SourceRef,
 )
 from kubepyhound.models import lookups
+from kubepyhound.utils.guid import get_guid, NodeTypes
 
 
 class Subject(BaseModel):
@@ -60,36 +61,44 @@ class ClusterRoleBindingNode(Node):
 
     @property
     def _role_edge(self):
-        target_id = self._lookup.cluster_roles(self.properties.role_ref)
+        # target_id = self._lookup.cluster_roles(self.properties.role_ref)
+        target_id = get_guid(
+            self.properties.role_ref, NodeTypes.K8sClusterRole, self._cluster
+        )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sReferencesRole", start=start_path, end=end_path)
         return edge
 
     def _service_account(self, start_path, target, namespace):
-        target_id = self._lookup.service_accounts(target.name, namespace)
-        if not target_id:
-            source_ref = SourceRef(name=self.properties.name, uid=self.id)
-            self._stale_collection.add(
-                StaleReference(
-                    resource_type="K8sServiceAccount",
-                    name=target.name,
-                    source_ref=source_ref,
-                    edge_type="K8sAuthorizes",
-                )
-            )
-            return None
+        # target_id = self._lookup.service_accounts(target.name, namespace)
+        # if not target_id:
+        #     source_ref = SourceRef(name=self.properties.name, uid=self.id)
+        #     self._stale_collection.add(
+        #         StaleReference(
+        #             resource_type="K8sServiceAccount",
+        #             name=target.name,
+        #             source_ref=source_ref,
+        #             edge_type="K8sAuthorizes",
+        #         )
+        #     )
+        #     return None
 
-        else:
-            end_path = EdgePath(value=target_id, match_by="id")
-            return Edge(kind="K8sAuthorizes", start=start_path, end=end_path)
+        # else:
+        target_id = get_guid(
+            target.name, NodeTypes.K8sServiceAccount, self._cluster, namespace
+        )
+        end_path = EdgePath(value=target_id, match_by="id")
+        return Edge(kind="K8sAuthorizes", start=start_path, end=end_path)
 
     def _get_target_user(self, target_name: str) -> "EdgePath":
-        target_id = self._lookup.users(target_name)
+        # target_id = self._lookup.users(target_name)
+        target_id = get_guid(target_name, NodeTypes.K8sUser, self._cluster)
         return EdgePath(value=target_id, match_by="id")
 
     def _get_target_group(self, target_name: str) -> "EdgePath":
         target_id = self._lookup.groups(target_name)
+        target_id = get_guid(target_name, NodeTypes.K8sGroup, self._cluster)
         return EdgePath(value=target_id, match_by="id")
 
     @property
@@ -131,9 +140,9 @@ class ClusterRoleBindingNode(Node):
             displayname=model.metadata.name,
             role_ref=model.role_ref.name,
             subjects=model.subjects,
+            uid=model.metadata.uid,
         )
         return cls(
-            id=model.metadata.uid,
             kinds=["K8sClusterRoleBinding", "K8sRoleBinding"],
             properties=properties,
         )

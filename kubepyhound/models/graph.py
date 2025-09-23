@@ -6,6 +6,24 @@ from kubepyhound.models.k8s.resource import ResourceNode
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Union
 
+# from enum import Enum
+
+
+# class NodeTypes(str, Enum):
+#     K8sCluster = "K8sCluster"
+#     K8sNamespace = "K8sNamespace"
+#     K8sScopedRole = "K8sScopedRole"
+#     K8sScopedRoleBinding = "K8sScopedRoleBinding"
+#     K8sNode = "K8sNode"
+#     K8sPod = "K8sPod"
+#     K8sServiceAccount = "K8sServiceAccount"
+#     K8sClusterRole = "K8sClusterRole"
+#     K8sClusterRoleBinding = "K8sClusterRoleBinding"
+#     K8sResource = "K8sResource"
+#     K8sResourceGroup = "K8sResourceGroup"
+#     K8sUser = "K8sUser"
+#     K8sGroup = "K8sGroup"
+
 
 class GraphEntries(BaseModel):
     nodes: list[Union[Node, PodNode, RoleNode, ClusterRoleNode, ResourceNode]] = []

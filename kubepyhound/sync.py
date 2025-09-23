@@ -12,7 +12,7 @@ from kubepyhound.models.k8s.identities import UserNode, GroupNode
 from kubepyhound.models.k8s.cluster_role import ClusterRoleNode
 from kubepyhound.models.k8s.service_account import ServiceAccountNode
 from kubepyhound.models.k8s.resource_group import ResourceGroupNode
-from kubepyhound.models.k8s.resource import ResourceNode
+from kubepyhound.models.k8s.resource import ResourceNode, CustomResourceNode
 from kubepyhound.models.k8s.stale import StaleNode
 from kubepyhound.models.k8s.dynamic import DynamicNode
 from kubepyhound.models.eks.user import IAMUserNode
@@ -64,6 +64,7 @@ progress.start()
 class SyncOptions:
     input: Path
     session: BloodHound
+    cluster: str
     lookup: LookupManager
     job_id: int | None = None
     mode: str = "sync"
@@ -73,14 +74,22 @@ class SyncOptions:
 class ConvertOptions:
     input: Path
     output: Path
+    cluster: str
     lookup: LookupManager
     mode: str = "convert"
 
 
 class ResourceGraph:
-    def __init__(self, files: list[str], model_class: Type[T], lookup: LookupManager):
+    def __init__(
+        self,
+        files: list[str],
+        model_class: Type[T],
+        lookup: LookupManager,
+        cluster: str,
+    ):
         self.files = files
         self.model_class = model_class
+        self.cluster = cluster
         self.task = progress.add_task(
             f"Converting {len(self.files)} {self.model_class.__name__}s",
             total=len(self.files),
@@ -93,6 +102,7 @@ class ResourceGraph:
         for resource in self.files:
             node = self.model_class.from_input(**load_json(resource))
             node._lookup = self.lookup
+            node._cluster = self.cluster
             graph_entries.nodes.append(node)
             for edge in node.edges:
                 graph_entries.edges.append(edge)
@@ -120,7 +130,10 @@ def process_resources(
     options: ConvertOptions | SyncOptions,
 ):
     graph = ResourceGraph(
-        files=resource_files, model_class=model_class, lookup=options.lookup
+        files=resource_files,
+        model_class=model_class,
+        lookup=options.lookup,
+        cluster=options.cluster,
     )
     if len(resource_files) > 0:
 
@@ -151,11 +164,13 @@ def sync_callback(
     token_id: Annotated[str, typer.Option(envvar="BHE_API_ID")],
     token_key: Annotated[str, typer.Option(envvar="BHE_API_KEY")],
 ):
-    print("test")
+    # print("test")
     lookup = LookupManager()
     lookup.con = duckdb.connect(database="k8s.duckdb", read_only=False)
     session = BloodHound(token_id=token_id, token_key=token_key, bhe_uri=bhe_uri)
-    ctx.obj = SyncOptions(input, session, lookup=lookup)
+    cluster_metadata = load_json(f"{input}/cluster/cluster.json")
+    cluster_id = cluster_metadata["name"]
+    ctx.obj = SyncOptions(input, session, lookup=lookup, cluster=cluster_id)
 
 
 @convert_app.callback()
@@ -186,7 +201,10 @@ def convert_callback(
 ):
     lookup = LookupManager()
     lookup.con = duckdb.connect(database="k8s.duckdb", read_only=False)
-    ctx.obj = ConvertOptions(input, output=output, lookup=lookup)
+    cluster_metadata = load_json(f"{input}/cluster/cluster.json")
+    ctx.obj = ConvertOptions(
+        input, output=output, lookup=lookup, cluster=cluster_metadata["name"]
+    )
 
 
 def shared_commands(app: typer.Typer):
@@ -274,7 +292,7 @@ def shared_commands(app: typer.Typer):
             recursive=True,
         )
         # typer.echo(f"Found {len(resource_files)} custom resources")
-        return process_resources(resource_files, ResourceNode, ctx.obj)
+        return process_resources(resource_files, CustomResourceNode, ctx.obj)
 
     @app.command()
     def resource_definitions(ctx: typer.Context):

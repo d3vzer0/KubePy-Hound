@@ -1,7 +1,14 @@
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    model_validator,
+    computed_field,
+)
 from abc import ABC, abstractmethod
 from typing import Optional
-from kubepyhound.utils.guid import get_guid
+from kubepyhound.utils.guid import get_guid, NodeTypes
 from datetime import datetime
 from kubepyhound.utils.lookup import LookupManager
 
@@ -17,17 +24,12 @@ class StaleReference(BaseModel):
     name: str
     source_ref: SourceRef
     edge_type: str
-    uid: str | None = None
+    # uid: str | None = None
 
-    @model_validator(mode="after")
-    def set_guid(self) -> "StaleReference":
-        self.uid = get_guid(
-            self.name,
-            scope="system/{source_ref}",
-            kube_type="serviceaccount",
-            name=self.name,
-        )
-        return self
+    @computed_field
+    @property
+    def uid(self) -> str:
+        return get_guid(self.name, "K8sStaleRef", "")
 
 
 class StaleReferenceCollector(BaseModel):
@@ -48,20 +50,34 @@ class StaleReferenceCollector(BaseModel):
 class NodeProperties(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: str
+    namespace: str | None = None
     displayname: str
     exists: bool = True
     last_seen: datetime = Field(default_factory=datetime.now)
+    uid: str
 
 
 class Node(BaseModel, ABC):
     model_config = ConfigDict(extra="allow")
-    id: str
+    # id: str
     kinds: list[str]
     properties: NodeProperties
     _stale_collection: StaleReferenceCollector = PrivateAttr(
         default_factory=StaleReferenceCollector
     )
     _lookup: LookupManager = PrivateAttr()
+    _cluster: str = PrivateAttr()
+
+    @computed_field
+    @property
+    def id(self) -> str:
+        scope = (
+            "__global__" if not self.properties.namespace else self.properties.namespace
+        )
+        dyn_uid = get_guid(
+            self.properties.name, NodeTypes[self.kinds[0]], self._cluster, scope
+        )
+        return dyn_uid
 
     @classmethod
     @abstractmethod

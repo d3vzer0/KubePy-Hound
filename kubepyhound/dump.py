@@ -99,6 +99,7 @@ def progress_handler(task_name: str):
 
 
 @dump_app.command()
+@progress_handler("namespaces")
 def namespaces(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0

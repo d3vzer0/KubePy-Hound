@@ -3,6 +3,7 @@ from datetime import datetime
 from kubepyhound.models.entries import NodeProperties, Edge, EdgePath
 from kubepyhound.models.entries import Node as GraphNode
 from kubepyhound.models import lookups
+from kubepyhound.utils.guid import get_guid, NodeTypes
 
 
 class Metadata(BaseModel):
@@ -20,7 +21,8 @@ class NodeOutput(GraphNode):
 
     @property
     def _authenticated_group_edge(self):
-        target_id = self._lookup.groups("system:authenticated")
+        # target_id = self._lookup.groups("system:authenticated")
+        target_id = get_guid("system:authenticated", NodeTypes.K8sGroup, self._cluster)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
@@ -28,7 +30,8 @@ class NodeOutput(GraphNode):
 
     @property
     def _nodes_group_edge(self):
-        target_id = self._lookup.groups("system:nodes")
+        # target_id = self._lookup.groups("system:nodes")
+        target_id = get_guid("system:nodes", NodeTypes.K8sGroup, self._cluster)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
@@ -36,8 +39,9 @@ class NodeOutput(GraphNode):
 
     @property
     def _cluster_edge(self):
+        target_id = get_guid(self._cluster, NodeTypes.K8sCluster, self._cluster)
         start_path = EdgePath(value=self.id, match_by="id")
-        end_path = EdgePath(value=self._lookup.cluster["uid"], match_by="id")
+        end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
         return edge
 
@@ -53,6 +57,10 @@ class NodeOutput(GraphNode):
     def from_input(cls, **kwargs) -> "NodeOutput":
         node_out = Node(**kwargs)
         properties = NodeProperties(
-            name=node_out.metadata.name, displayname=node_out.metadata.name
+            name=node_out.metadata.name,
+            displayname=node_out.metadata.name,
+            uid=node_out.metadata.uid,
         )
-        return cls(id=node_out.metadata.uid, kinds=["K8sNode"], properties=properties)
+        # resource_path = f"{properties.name}.{NodeTypes.K8sNode.value}.system.a0704eb1-8213-5055-b822-238ec31feeca"
+        # print(resource_path)
+        return cls(kinds=["K8sNode"], properties=properties)

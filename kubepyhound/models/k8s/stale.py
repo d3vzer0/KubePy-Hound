@@ -41,4 +41,4 @@ class StaleNode(Node):
             source_ref=model.source_ref.uid,
             source_edge_type=model.edge_type,
         )
-        return cls(id=model.uid, kinds=[model.resource_type], properties=properties)
+        return cls(kinds=[model.resource_type], properties=properties)

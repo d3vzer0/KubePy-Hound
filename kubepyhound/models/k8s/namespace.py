@@ -32,8 +32,8 @@ class NamespaceNode(Node):
     def from_input(cls, **kwargs) -> "NamespaceNode":
         ns_node = Namespace(**kwargs)
         properties = NodeProperties(
-            name=ns_node.metadata.name, displayname=ns_node.metadata.name
+            name=ns_node.metadata.name,
+            displayname=ns_node.metadata.name,
+            uid=ns_node.metadata.uid,
         )
-        return cls(
-            id=ns_node.metadata.uid, kinds=["K8sNamespace"], properties=properties
-        )
+        return cls(kinds=["K8sNamespace"], properties=properties)

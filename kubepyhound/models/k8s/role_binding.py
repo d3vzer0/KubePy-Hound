@@ -9,6 +9,8 @@ from kubepyhound.models.entries import (
     SourceRef,
 )
 from kubepyhound.models import lookups
+from kubepyhound.utils.guid import get_guid
+from kubepyhound.utils.guid import NodeTypes
 
 
 class Subject(BaseModel):
@@ -47,7 +49,7 @@ class RoleBinding(BaseModel):
 
 
 class ExtendedProperties(NodeProperties):
-    namespace: str
+    # namespace: str
     role_ref: str
     subjects: list[Subject]
 
@@ -56,16 +58,24 @@ class RoleBindingNode(Node):
     properties: ExtendedProperties
 
     def _get_target_user(self, target_name: str) -> "EdgePath":
-        target_id = self._lookup.users(target_name)
+        # target_id = self._lookup.users(target_name)
+        # target_id = get_guid(
+        #     self._cluster, "system", "K8sNamespace", self.properties.namespace
+        # )
+        target_id = get_guid(target_name, NodeTypes.K8sUser, self._cluster)
         return EdgePath(value=target_id, match_by="id")
 
     def _get_target_group(self, target_name: str) -> "EdgePath":
-        target_id = self._lookup.groups(target_name)
+        # target_id = self._lookup.groups(target_name)
+        target_id = get_guid(target_name, NodeTypes.K8sUser, self._cluster)
         return EdgePath(value=target_id, match_by="id")
 
     @property
     def _namespace_edge(self):
-        target_id = self._lookup.namespaces(self.properties.namespace)
+        # target_id = self._lookup.namespaces(self.properties.namespace)
+        target_id = get_guid(
+            self.properties.namespace, NodeTypes.K8sNamespace, self._cluster
+        )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
@@ -73,8 +83,15 @@ class RoleBindingNode(Node):
 
     @property
     def _role_edge(self):
-        target_id = self._lookup.roles(
-            self.properties.role_ref, self.properties.namespace
+        # target_id = self._lookup.roles(
+        #     self.properties.role_ref, self.properties.namespace
+        # )
+
+        target_id = get_guid(
+            self.properties.role_ref,
+            NodeTypes.K8sScopedRole,
+            self._cluster,
+            namespace=self.properties.namespace,
         )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
@@ -90,7 +107,10 @@ class RoleBindingNode(Node):
                 namespace = (
                     target.namespace if target.namespace else self.properties.namespace
                 )
-                target_id = self._lookup.service_accounts(target.name, namespace)
+                # target_id = self._lookup.service_accounts(target.name, namespace)
+                target_id = get_guid(
+                    target.name, NodeTypes.K8sServiceAccount, self._cluster, namespace
+                )
                 if target_id:
                     end_path = EdgePath(value=target_id, match_by="id")
                     edges.append(
@@ -137,9 +157,9 @@ class RoleBindingNode(Node):
             namespace=model.metadata.namespace,
             role_ref=model.role_ref.name,
             subjects=model.subjects,
+            uid=model.metadata.uid,
         )
         return cls(
-            id=model.metadata.uid,
             kinds=["K8sScopedRoleBinding", "K8sRoleBinding"],
             properties=properties,
         )

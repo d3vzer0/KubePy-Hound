@@ -7,11 +7,6 @@ from kubepyhound.models import lookups
 class IAMUser(BaseModel):
     name: str
     arn: str
-    uid: str = Field(
-        default_factory=lambda data: get_guid(
-            data["name"], scope="aws", kube_type="iam-user", name=data["name"]
-        )
-    )
     groups: list[str]
 
 
@@ -24,7 +19,8 @@ class IAMUserNode(Node):
 
     @property
     def _authenticated_group_edge(self):
-        target_id = self._lookup.groups["system:authenticated"]
+        # target_id = self._lookup.groups["system:authenticated"]
+        # target_id = get_guid("system:authenticated", NodeT)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="MEMBER_OF", start=start_path, end=end_path)

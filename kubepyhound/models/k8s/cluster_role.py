@@ -4,6 +4,7 @@ from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from kubepyhound.models import lookups
 from typing import Optional
 from enum import Enum
+from kubepyhound.utils.guid import get_guid, NodeTypes
 import fnmatch
 
 
@@ -113,19 +114,23 @@ class ClusterRoleNode(Node):
             start_path = EdgePath(value=self.id, match_by="id")
             for target_group in rule.api_groups:
                 if rule.resources:
-                    resources = (
-                        [
-                            self._lookup.resource_definitions(rule)
-                            for rule in rule.resources
-                        ]
-                        if target_group == "__core__"
-                        else [
-                            self._lookup.custom_resource_definitions(rule)
-                            for rule in rule.resources
-                        ]
-                    )
-                    for resource in resources:
-                        end_path = EdgePath(value=resource, match_by="id")
+                    # resources = (
+                    #     [
+                    #         self._lookup.resource_definitions(rule)
+                    #         for rule in rule.resources
+                    #     ]
+                    #     if target_group == "__core__"
+                    #     else [
+                    #         self._lookup.custom_resource_definitions(rule)
+                    #         for rule in rule.resources
+                    #     ]
+                    # )
+                    for resource in rule.resources:
+                        target_id = get_guid(
+                            resource, NodeTypes.K8sResource, self._cluster
+                        )
+                        end_path = EdgePath(value=target_id, match_by="id")
+                        # end_path = EdgePath(value=resource, match_by="id")
                         matched_verbs = self._matching_verbs(rule.verbs)
                         for verb in matched_verbs:
                             verb_permission = VERB_TO_PERMISSION[verb]
@@ -151,10 +156,12 @@ class ClusterRoleNode(Node):
     def from_input(cls, **kwargs) -> "ClusterRoleNode":
         model = ClusterRole(**kwargs)
         properties = ExtendedProperties(
-            name=model.metadata.name, displayname=model.metadata.name, rules=model.rules
+            name=model.metadata.name,
+            displayname=model.metadata.name,
+            rules=model.rules,
+            uid=model.metadata.uid,
         )
         return cls(
-            id=model.metadata.uid,
             kinds=["K8sClusterRole", "K8sRole"],
             properties=properties,
         )

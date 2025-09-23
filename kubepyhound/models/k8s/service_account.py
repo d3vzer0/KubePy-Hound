@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from kubepyhound.models import lookups
+from kubepyhound.utils.guid import get_guid
+from kubepyhound.utils.guid import NodeTypes
 
 
 class Secret(BaseModel):
@@ -41,7 +43,8 @@ class ServiceAccount(BaseModel):
 
 
 class ExtendedProperties(NodeProperties):
-    namespace: str
+    # namespace: str
+    bla: str | None = None
 
 
 class ServiceAccountNode(Node):
@@ -49,7 +52,10 @@ class ServiceAccountNode(Node):
 
     @property
     def _namespace_edge(self):
-        target_id = self._lookup.namespaces(self.properties.namespace)
+        # target_id = self._lookup.namespaces(self.properties.namespace)
+        target_id = get_guid(
+            self.properties.namespace, NodeTypes.K8sNamespace, self._cluster
+        )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
@@ -57,7 +63,10 @@ class ServiceAccountNode(Node):
 
     @property
     def _authenticated_group_edge(self):
-        target_id = self._lookup.groups("system:authenticated")
+        # target_id = self._lookup.groups("system:authenticated")
+        target_id = get_guid(
+            "system:serviceaccounts", NodeTypes.K8sGroup, self._cluster
+        )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
@@ -65,7 +74,10 @@ class ServiceAccountNode(Node):
 
     @property
     def _service_accounts_edge(self):
-        target_id = self._lookup.groups("system:serviceaccounts")
+        # target_id = self._lookup.groups("system:serviceaccounts")
+        target_id = get_guid(
+            "system:serviceaccounts", NodeTypes.K8sServiceAccount, self._cluster
+        )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sMemberOf", start=start_path, end=end_path)
@@ -86,7 +98,6 @@ class ServiceAccountNode(Node):
             name=model.metadata.name,
             displayname=model.metadata.name,
             namespace=model.metadata.namespace,
+            uid=model.metadata.uid,
         )
-        return cls(
-            id=model.metadata.uid, kinds=["K8sServiceAccount"], properties=properties
-        )
+        return cls(kinds=["K8sServiceAccount"], properties=properties)

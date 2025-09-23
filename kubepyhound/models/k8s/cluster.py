@@ -1,19 +1,16 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, computed_field
 from kubepyhound.models.entries import Node, NodeProperties
-from kubepyhound.utils.guid import get_guid
+from kubepyhound.utils.guid import get_guid, NodeTypes
 from typing_extensions import Self
 
 
 class Cluster(BaseModel):
     name: str
-    uid: str | None = None
 
-    @model_validator(mode="after")
-    def set_guid(self) -> Self:
-        self.uid = get_guid(
-            self.name, scope="system", kube_type="cluster", name=self.name
-        )
-        return self
+    @computed_field
+    @property
+    def uid(self) -> str:
+        return get_guid(self.name, NodeTypes.K8sCluster, self.name)
 
 
 class ClusterNode(Node):
@@ -25,5 +22,7 @@ class ClusterNode(Node):
     @classmethod
     def from_input(cls, **kwargs) -> "ClusterNode":
         cluster = Cluster(**kwargs)
-        properties = NodeProperties(name=cluster.name, displayname=cluster.name)
-        return cls(id=cluster.uid, kinds=["K8sCluster"], properties=properties)
+        properties = NodeProperties(
+            name=cluster.name, displayname=cluster.name, uid=cluster.uid
+        )
+        return cls(kinds=["K8sCluster"], properties=properties)
