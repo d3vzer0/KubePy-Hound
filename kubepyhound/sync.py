@@ -111,14 +111,21 @@ class ResourceGraph:
 
     def to_file(self, output_path: Path) -> None:
         with open(output_path, "w") as outputfile:
-            outputfile.write(self.graph.model_dump_json(exclude_unset=False, indent=2))
+            outputfile.write(
+                self.graph.model_dump_json(
+                    exclude_unset=False, indent=2, exclude_none=True
+                )
+            )
 
     def to_bloodhound(self, session: BloodHound, ctx: SyncOptions) -> None:
         if not ctx.job_id:
             ctx.job_id = session.start_upload_job()
 
         session.upload_graph(
-            ctx.job_id, self.graph.model_dump_json(exclude_unset=False, indent=2)
+            ctx.job_id,
+            self.graph.model_dump_json(
+                exclude_unset=False, indent=2, exclude_none=True
+            ),
         )
 
 
