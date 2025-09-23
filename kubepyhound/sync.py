@@ -56,9 +56,6 @@ KUBE_ICONS = {
 sync_app = typer.Typer()
 convert_app = typer.Typer()
 
-# progress = Progress()
-# progress.start()
-
 
 @dataclass
 class SyncOptions:
@@ -165,13 +162,18 @@ def sync_callback(
     token_id: Annotated[str, typer.Option(envvar="BHE_API_ID")],
     token_key: Annotated[str, typer.Option(envvar="BHE_API_KEY")],
 ):
-    # print("test")
     lookup = LookupManager()
     lookup.con = duckdb.connect(database="k8s.duckdb", read_only=False)
     session = BloodHound(token_id=token_id, token_key=token_key, bhe_uri=bhe_uri)
     cluster_metadata = load_json(f"{input}/cluster/cluster.json")
     cluster_id = cluster_metadata["name"]
     ctx.obj = SyncOptions(input, session, lookup=lookup, cluster=cluster_id)
+
+    def _close_upload_job():
+        if ctx.obj.job_id is not None:
+            ctx.obj.session.stop_upload_job(ctx.obj.job_id)
+
+    ctx.call_on_close(_close_upload_job)
 
 
 @convert_app.callback()
@@ -338,7 +340,6 @@ def shared_commands(app: typer.Typer):
             custom_type = {"custom_types": {node_name: node_type}}
             custom = CustomNode(**custom_type)
             response = ctx.obj.session.custom_node(custom.model_dump_json())
-        # typer.echo("Synced custom icons with bloodhound")
 
     @app.command()
     def all(ctx: typer.Context):
@@ -364,7 +365,4 @@ def shared_commands(app: typer.Typer):
         #     f"[green]Converting resources to OpenGraph", total=len(sync_functions)
         # )
         for _, func in sync_functions:
-            # progress.advance(total_progress)
             ctx.invoke(func, ctx)
-
-        # progress.stop()
