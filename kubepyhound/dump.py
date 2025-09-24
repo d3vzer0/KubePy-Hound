@@ -41,6 +41,8 @@ RESOURCE_TYPES = {
     "Pod": Pod,
     "ServiceAccount": ServiceAccount,
     "Role": Role,
+    "Node": Node,
+    "Namespace": Namespace,
     "RoleBinding": RoleBinding,
     "ClusterRole": ClusterRoleBinding,
     "ClusterRoleBinding": Cluster,
