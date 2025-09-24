@@ -1,5 +1,6 @@
 from typing_extensions import Annotated
 from kubernetes import client, config
+from kubernetes.dynamic import DynamicClient
 from kubepyhound.models.k8s.pod import Pod
 from kubepyhound.models.k8s.namespace import Namespace
 from kubepyhound.models.k8s.node import Node
@@ -35,6 +36,15 @@ from functools import wraps
 
 
 IDENTITY_MAPPING = {"User": User, "Group": Group}
+RESOURCE_TYPES = {
+    "Pod": Pod,
+    "ServiceAccount": ServiceAccount,
+    "Role": Role,
+    "RoleBinding": RoleBinding,
+    "ClusterRole": ClusterRoleBinding,
+    "ClusterRoleBinding": Cluster,
+    # "Service": ServiceNode
+}
 
 
 @dataclass
@@ -401,39 +411,43 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
     return resource_count
 
 
-# @dump_app.command()
-# def dynamic(output_dir: OutputPath):
-#     mapper = NamespaceResourceMapper("./output/api_resources")
-#     get_api_groups = glob.glob("./output/api_groups/*.json")
+@dump_app.command()
+@progress_handler("unspecified resources")
+def generic(ctx: typer.Context, output_dir: OutputPath):
+    api_client = client.ApiClient()
+    dyn_client = DynamicClient(api_client)
+    resource_count = 0
 
-#     for api_group in get_api_groups:
-#         with open(api_group, "r") as inputapi:
-#             api_obj = json.loads(inputapi.read())
-#         mapper.api_groups[api_obj["name"]] = api_obj
+    discovered_resources = dyn_client.resources.search()
+    for resource in discovered_resources:
+        # Only check for resources that are namespaced, support the list command and or not of kind
+        # *List
+        if (
+            resource.namespaced
+            and "list" in resource.verbs
+            and not resource.kind.endswith("List")
+        ):
+            resource_client = dyn_client.resources.get(
+                api_version=resource.api_version, kind=resource.kind
+            )
 
+            items = resource_client.get()
+            for item in items.items:
+                resource_count += 1
+                # print(item)
+                # all_resources.append(
+                #     {
+                #         "kind": item.kind,
+                #         "name": item.metadata.name,
+                #         "apiVersion": item.apiVersion,
+                #     }
 
-#     get_roles = glob.glob("./output/namespaces/**/roles/*.json")
-#     for role in get_roles:
-#         with open(role, "r") as inputrole:
-#             role_json = json.loads(inputrole.read())
-#             role_obj = Role(**role_json)
-#         if role_obj.rules:
-#             for rule in role_obj.rules:
-#                 find_resources = mapper.discover_resources_for_rule(
-#                     rule, role_obj.metadata.namespace
-#                 )
-#                 for resource in find_resources:
-#                     if resource["kind"] == "Secret":
-#                         permissions = [permission.value for permission in rule.verbs]
-#                         source_role = {"name": role_obj.metadata.name, "uid": role_obj.metadata.uid,
-#                                     "permissions": permissions}
-#                         dynamic_resource = DynamicResource(**resource, role=source_role)
-#                         resource_output_path = f"{output_dir}/namespaces/{dynamic_resource.metadata.namespace}/dynamic/{dynamic_resource.metadata.name}.json"
-#                         dump_client.to_json(resource_output_path, dynamic_resource.model_dump_json(indent=2), output_dir)
+    return resource_count
 
 
 @dump_app.command()
 def bootstrap(
+    # This may be used later for some extra enrichment sauce
     queries_path: Annotated[
         Path,
         typer.Argument(
