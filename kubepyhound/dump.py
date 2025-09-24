@@ -413,7 +413,7 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 
 
 @dump_app.command()
-@progress_handler("unspecified resources")
+@progress_handler("unmapped resources")
 def generic(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
@@ -423,17 +423,11 @@ def generic(ctx: typer.Context, output_dir: OutputPath):
 
     discovered_resources = dyn_client.resources.search()
     for resource in discovered_resources:
-        # Only check for resources that are namespaced, support the list command and or not of kind
-        # *List
-        if (
-            resource.namespaced
-            and "list" in resource.verbs
-            and not resource.kind.endswith("List")
-        ):
+        # Only check for resources that support the list command and or not of kind *List
+        if not resource.kind.endswith("List") and "list" in resource.verbs:
             resource_client = dyn_client.resources.get(
                 api_version=resource.api_version, kind=resource.kind
             )
-
             items = resource_client.get()
             for item in items.items:
                 generic_model = Generic(**item.to_dict())
@@ -442,7 +436,7 @@ def generic(ctx: typer.Context, output_dir: OutputPath):
                     dump_client.write(
                         generic_model,
                         name=generic_model.metadata.name,
-                        resource="unmapped",
+                        resource=f"unmapped/{generic_model.kind}",
                         namespace=generic_model.metadata.namespace,
                     )
 
