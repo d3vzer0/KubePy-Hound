@@ -18,6 +18,7 @@ from kubepyhound.models.k8s.dynamic import DynamicResource
 from kubepyhound.models.eks.user import IAMUser
 from kubepyhound.utils.helpers import DumpClient
 from kubepyhound.utils.mapper import NamespaceResourceMapper
+from kubepyhound.models.k8s.generic import Generic
 from kubepyhound.models.k8s.service_account import ServiceAccount
 from pathlib import Path
 from rich.progress import (
@@ -414,9 +415,11 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 @dump_app.command()
 @progress_handler("unspecified resources")
 def generic(ctx: typer.Context, output_dir: OutputPath):
+    dump_client: DumpClient = ctx.obj.client
+    resource_count = 0
+
     api_client = client.ApiClient()
     dyn_client = DynamicClient(api_client)
-    resource_count = 0
 
     discovered_resources = dyn_client.resources.search()
     for resource in discovered_resources:
@@ -433,14 +436,15 @@ def generic(ctx: typer.Context, output_dir: OutputPath):
 
             items = resource_client.get()
             for item in items.items:
-                resource_count += 1
-                # print(item)
-                # all_resources.append(
-                #     {
-                #         "kind": item.kind,
-                #         "name": item.metadata.name,
-                #         "apiVersion": item.apiVersion,
-                #     }
+                generic_model = Generic(**item.to_dict())
+                if not generic_model.kind in RESOURCE_TYPES:
+                    resource_count += 1
+                    dump_client.write(
+                        generic_model,
+                        name=generic_model.metadata.name,
+                        resource="unmapped",
+                        namespace=generic_model.metadata.namespace,
+                    )
 
     return resource_count
 
