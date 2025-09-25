@@ -1,4 +1,11 @@
-from pydantic import BaseModel, ConfigDict, Field, BeforeValidator, computed_field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    BeforeValidator,
+    computed_field,
+    field_validator,
+)
 from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from typing import Optional, Any, TypeVar, Annotated
@@ -52,6 +59,11 @@ class Metadata(BaseModel):
 class Pod(BaseModel):
     metadata: Metadata
     spec: Spec
+    kind: str | None = "Pod"
+
+    @field_validator("kind", mode="before")
+    def set_default_if_none(cls, v):
+        return v if v is not None else "Pod"
 
 
 class ExtendedProperties(NodeProperties):

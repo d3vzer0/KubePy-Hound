@@ -3,14 +3,15 @@ from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from kubepyhound.utils.guid import get_guid
 from kubepyhound.utils.guid import NodeTypes
+from typing import Optional
 
 
 class Metadata(BaseModel):
     name: str
-    uid: str
-    namespace: str
-    creation_timestamp: datetime
-    labels: dict
+    uid: str | None = None
+    namespace: str | None = None
+    creation_timestamp: datetime | None = None
+    labels: dict | None = None
 
 
 class Generic(BaseModel):
@@ -20,6 +21,7 @@ class Generic(BaseModel):
 
 class ExtendedProperties(NodeProperties):
     model_config = ConfigDict(extra="allow")
+    uid: str | None
     kind: str
 
 
@@ -33,6 +35,7 @@ class GenericNode(Node):
     @classmethod
     def from_input(cls, **kwargs) -> "GenericNode":
         model = Generic(**kwargs)
+        # print(model)
         properties = ExtendedProperties(
             name=model.metadata.name,
             displayname=model.metadata.name,
@@ -40,4 +43,4 @@ class GenericNode(Node):
             uid=model.metadata.uid,
             kind=model.kind,
         )
-        return cls(kinds=[model.kind], properties=properties)
+        return cls(kinds=[f"K8s{model.kind}"], properties=properties)

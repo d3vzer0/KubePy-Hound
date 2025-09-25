@@ -18,3 +18,4 @@ class Metadata(BaseModel):
 class Service(BaseModel):
     metadata: Metadata
     spec: Spec
+    kind: str | None = "Service"

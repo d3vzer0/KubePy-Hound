@@ -8,12 +8,14 @@ class User(BaseModel):
     name: str
     api_group: str
     groups: list[str] = []
+    kind: str = "User"
 
 
 class Group(BaseModel):
     name: str
     api_group: str
     members: list[str] = []
+    kind: str = "Group"
 
 
 class UserNode(Node):

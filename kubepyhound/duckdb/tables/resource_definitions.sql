@@ -1,5 +1,7 @@
 CREATE OR REPLACE TABLE resource_definitions AS SELECT * FROM read_json(
-  'output/resource_definitions/**/*.json',
+  [ 'output/resource_definitions/**/*.json',
+    'output/custom_resource_definitions/**/*.json',
+  ],
   columns = {
     name: 'VARCHAR',
     categories: 'VARCHAR[]',

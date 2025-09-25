@@ -3,6 +3,8 @@ from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from kubepyhound.models import lookups
 from pydantic import Field
+from kubepyhound.utils.guid import get_guid
+from kubepyhound.utils.guid import NodeTypes
 
 
 VERB_TO_PERMISSION = {
@@ -42,7 +44,7 @@ class DynamicResource(BaseModel):
 
 class ExtendedProperties(NodeProperties):
     model_config = ConfigDict(extra="allow")
-    namespace: str
+    # namespace: str
 
 
 class DynamicNode(Node):
@@ -52,7 +54,10 @@ class DynamicNode(Node):
 
     @property
     def _namespace_edge(self):
-        target_id = self._lookup.namespaces(self.properties.namespace)
+        # target_id = self._lookup.namespaces(self.properties.namespace)
+        target_id = get_guid(
+            self.properties.namespace, NodeTypes.K8sNamespace, self._cluster
+        )
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
@@ -63,7 +68,8 @@ class DynamicNode(Node):
         role_edges = []
         for permission in self.source_role_permissions:
             end_path = EdgePath(value=self.id, match_by="id")
-            target_id = self.source_role_uid
+            # target_id = self.source_role_uid
+            # target_id =
             start_path = EdgePath(value=target_id, match_by="id")
             mapped_permission = VERB_TO_PERMISSION[permission]
             edge = Edge(kind=mapped_permission, start=start_path, end=end_path)
@@ -84,7 +90,6 @@ class DynamicNode(Node):
             **kube_resource.metadata.labels,
         )
         return cls(
-            id=kube_resource.metadata.uid,
             kinds=[f"K8s{kube_resource.kind}"],
             properties=properties,
             source_role_uid=kube_resource.role.uid,

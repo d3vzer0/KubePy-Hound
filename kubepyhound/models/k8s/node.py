@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from kubepyhound.models.entries import NodeProperties, Edge, EdgePath
 from kubepyhound.models.entries import Node as GraphNode
@@ -15,6 +15,11 @@ class Metadata(BaseModel):
 
 class Node(BaseModel):
     metadata: Metadata
+    kind: str | None = "Node"
+
+    @field_validator("kind", mode="before")
+    def set_default_if_none(cls, v):
+        return v if v is not None else "Node"
 
 
 class NodeOutput(GraphNode):

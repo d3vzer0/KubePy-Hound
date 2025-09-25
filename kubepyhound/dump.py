@@ -140,6 +140,7 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
     v1 = client.CoreV1Api()
     pods = v1.list_pod_for_all_namespaces()
     for pod in pods.items:
+
         pod_object = Pod(**pod.to_dict())
         dump_client.write(
             pod_object,
@@ -484,6 +485,7 @@ def all(ctx: typer.Context, output_dir: OutputPath):
         ("services", services),
         ("resource_definitions", resource_definitions),
         ("custom_resource_definitions", custom_resource_definitions),
+        ("generic", generic),
     ]
 
     for _, func in dump_functions:

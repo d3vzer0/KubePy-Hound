@@ -6,6 +6,7 @@ from typing_extensions import Self
 
 class Cluster(BaseModel):
     name: str
+    kind: str = "Cluster"
 
     @computed_field
     @property

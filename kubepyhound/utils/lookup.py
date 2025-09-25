@@ -30,6 +30,11 @@ class LookupManager:
         result = self.con.fetchone()
         return str(result[0]) if result else ""
 
+    def _find_resources(self, *args) -> list:
+        self.con.execute(*args)
+        results = self.con.fetchall()
+        return results
+
     def nodes(self, name: str) -> str:
         self.con.execute(
             f"SELECT metadata.uid FROM nodes WHERE metadata.name = ?", [name]
@@ -77,6 +82,32 @@ class LookupManager:
 
     def groups(self, name: str) -> str:
         return self._find_uid(f"SELECT uid FROM groups WHERE name = ?", [name])
+
+    def allowed_system_resources(self, resource_type: str):
+        return self._find_resources(
+            f"""SELECT 
+                r.metadata.name,
+                r.kind,
+                rd.singular_name,
+                rd.name AS definition
+            FROM resources r
+            JOIN resource_definitions rd ON r.kind = rd.kind
+            WHERE definition GLOB ?;""",
+            [resource_type],
+        )
+
+    def allowed_namespaced_resources(self, resource_type: str, namespace: str):
+        return self._find_resources(
+            f"""SELECT 
+                r.metadata.name,
+                r.kind,
+                rd.singular_name,
+                rd.name AS definition
+            FROM resources r
+            JOIN resource_definitions rd ON r.kind = rd.kind
+            WHERE definition GLOB ? AND metadata.namespace = ?;""",
+            [resource_type, namespace],
+        )
 
     def bootstrap(self, query_path: Path) -> None:
         bootstrap_files = glob.glob(f"{query_path}/*.sql")

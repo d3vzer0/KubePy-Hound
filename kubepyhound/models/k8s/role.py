@@ -5,7 +5,7 @@ from kubepyhound.models import lookups
 from typing import Optional
 from enum import Enum
 import fnmatch
-from kubepyhound.utils.guid import get_guid, NodeTypes
+from kubepyhound.utils.guid import get_guid, get_generic_guid, NodeTypes
 
 
 class Verbs(str, Enum):
@@ -66,6 +66,11 @@ class Rule(BaseModel):
 class Role(BaseModel):
     metadata: Metadata
     rules: Optional[list[Rule]] = []
+    kind: str | None = "Role"
+
+    @field_validator("kind", mode="before")
+    def set_default_if_none(cls, v):
+        return v if v is not None else "Role"
 
     @field_validator("rules")
     def validate_rules(cls, v):
@@ -99,7 +104,6 @@ class RoleNode(Node):
 
     @property
     def _namespace_edge(self):
-        # target_id = self._lookup.namespaces(self.properties.namespace)
         target_id = get_guid(
             self.properties.namespace, NodeTypes.K8sNamespace, self._cluster
         )
@@ -109,28 +113,36 @@ class RoleNode(Node):
         return edge
 
     def _rule_edge(self, rule: Rule):
-        targets = []
+        if not rule.api_groups or not rule.resources:
+            return []
+
         start_path = EdgePath(value=self.id, match_by="id")
-        for target_group in rule.api_groups:
-            # for rec in rule.resources:
-            #     print(rec)
-            # resources = (
-            #     [self._lookup.resource_definitions(rule) for rule in rule.resources]
-            #     if target_group == "__core__"
-            #     else [
-            #         self._lookup.custom_resource_definitions(rule)
-            #         for rule in rule.resources
-            #     ]
-            # )
-            for resource in rule.resources:
-                target_id = get_guid(resource, NodeTypes.K8sResource, self._cluster)
-                # end_path = EdgePath(value=resource, match_by="id")
-                end_path = EdgePath(value=target_id, match_by="id")
-                matched_verbs = self._matching_verbs(rule.verbs)
-                for verb in matched_verbs:
-                    verb_permission = VERB_TO_PERMISSION[verb]
-                    edge = Edge(kind=verb_permission, start=start_path, end=end_path)
-                    targets.append(edge)
+        matched_verbs = self._matching_verbs(rule.verbs)
+        namespace = self.properties.namespace
+        verb_permissions = [VERB_TO_PERMISSION[verb] for verb in matched_verbs]
+
+        all_allowed_resources = []
+        for resource in rule.resources:
+            allowed_resources = self._lookup.allowed_namespaced_resources(
+                resource, namespace
+            )
+            all_allowed_resources.extend(allowed_resources)
+
+        targets = []
+        for name, kind, singular, rd in all_allowed_resources:
+            for verb_permission in verb_permissions:
+                targets.append(
+                    Edge(
+                        kind=verb_permission,
+                        start=start_path,
+                        end=EdgePath(
+                            value=get_generic_guid(
+                                name, f"K8s{kind}", self._cluster, namespace
+                            ),
+                            match_by="id",
+                        ),
+                    )
+                )
 
         return targets
 
@@ -159,7 +171,3 @@ class RoleNode(Node):
             kinds=["K8sScopedRole", "K8sRole"],
             properties=properties,
         )
-
-
-# class RoleGraphEntries(GraphEntries):
-#     nodes: list[RoleNode] = []

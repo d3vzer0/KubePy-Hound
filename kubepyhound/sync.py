@@ -13,6 +13,8 @@ from kubepyhound.models.k8s.cluster_role import ClusterRoleNode
 from kubepyhound.models.k8s.service_account import ServiceAccountNode
 from kubepyhound.models.k8s.resource_group import ResourceGroupNode
 from kubepyhound.models.k8s.resource import ResourceNode, CustomResourceNode
+
+from kubepyhound.models.k8s.generic import GenericNode
 from kubepyhound.models.k8s.stale import StaleNode
 from kubepyhound.models.k8s.dynamic import DynamicNode
 from kubepyhound.models.eks.user import IAMUserNode
@@ -33,25 +35,24 @@ T = TypeVar("T", bound=GraphNode)
 E = TypeVar("E", bound=GraphEntries)
 
 KUBE_ICONS = {
-    "KubeCluster": "globe",
-    "KubeNode": "server",
-    "KubePod": "cube",
-    "KubeNamespace": "folder",
-    "KubeRole": "id-badge",
-    "KubeRoleBinding": "link",
-    "KubeClusterRole": "id-badge",
-    "KubeClusterRoleBinding": "link",
-    "KubeScopedRole": "id-badge",
-    "KubeScopedRoleBinding": "link",
-    "KubeServiceAccount": "user-cog",
-    "KubeUser": "user",
+    "K8sCluster": "globe",
+    "K8sNode": "server",
+    "K8sPod": "cube",
+    "K8sNamespace": "folder",
+    "K8sRole": "id-badge",
+    "K8sRoleBinding": "link",
+    "K8sClusterRole": "id-badge",
+    "K8sClusterRoleBinding": "link",
+    "K8sScopedRole": "id-badge",
+    "K8sScopedRoleBinding": "link",
+    "K8sServiceAccount": "user-cog",
+    "K8sUser": "user",
     "AWSIAMUser": "user",
-    "KubeGroup": "user-group",
-    "KubeResource": "gear",
-    "KubeResourceGroup": "gears",
-    "KubeSecret": "key",
+    "K8sGroup": "user-group",
+    "K8sResource": "gear",
+    "K8sResourceGroup": "gears",
+    "K8sSecret": "key",
 }
-
 
 sync_app = typer.Typer()
 convert_app = typer.Typer()
@@ -111,11 +112,14 @@ class ResourceGraph:
 
     def to_file(self, output_path: Path) -> None:
         with open(output_path, "w") as outputfile:
+            # try:
             outputfile.write(
                 self.graph.model_dump_json(
                     exclude_unset=False, indent=2, exclude_none=True
                 )
             )
+            # except Exception as e:
+            #     print(e)
 
     def to_bloodhound(self, session: BloodHound, ctx: SyncOptions) -> None:
         if not ctx.job_id:
@@ -333,6 +337,16 @@ def shared_commands(app: typer.Typer):
         return process_resources(resource_files, DynamicNode, ctx.obj)
 
     @app.command()
+    def generic(ctx: typer.Context):
+        resource_files = glob.glob(
+            f"{ctx.obj.input}/namespaces/*/unmapped/**/*.json", recursive=True
+        )
+        resource_files += glob.glob(
+            f"{ctx.obj.input}/unmapped/**/*.json", recursive=True
+        )
+        return process_resources(resource_files, GenericNode, ctx.obj)
+
+    @app.command()
     def icons(ctx: typer.Context):
         for node_name, icon_name in KUBE_ICONS.items():
             if node_name.startswith("AWS"):
@@ -365,7 +379,7 @@ def shared_commands(app: typer.Typer):
             ("service_accounts", service_accounts),
             ("resource_definitions", resource_definitions),
             ("custom_resource_definitions", custom_resource_definitions),
-            # ("icons", icons),
+            ("generic", generic),
         ]
 
         # total_progress = progress.add_task(

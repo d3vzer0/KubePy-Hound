@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from kubepyhound.models import lookups
@@ -13,6 +13,12 @@ class Metadata(BaseModel):
 
 class Namespace(BaseModel):
     metadata: Metadata
+    kind: str | None = "Namespace"
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def set_default_if_none(cls, v):
+        return v if v is not None else "Namespace"
 
 
 class NamespaceNode(Node):

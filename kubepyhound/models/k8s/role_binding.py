@@ -35,11 +35,15 @@ class Metadata(BaseModel):
 
 
 class RoleBinding(BaseModel):
-    kind: str | None = None
+    kind: str | None = "RoleBinding"
     subjects: list[Subject] = []
     metadata: Metadata
     role_ref: RoleRef
     subjects: list[Subject]
+
+    @field_validator("kind", mode="before")
+    def set_default_if_none(cls, v):
+        return v if v is not None else "RoleBinding"
 
     @field_validator("subjects", mode="before")
     def validate_subjects(cls, v):

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from kubepyhound.models import lookups
@@ -35,11 +35,15 @@ class Metadata(BaseModel):
 
 
 class ServiceAccount(BaseModel):
-    kind: str | None = None
+    kind: str | None = "ServiceAccount"
     metadata: Metadata
     automount_service_account_token: bool | None = None
     secrets: list[Secret] | None = None
     exists: bool = True
+
+    @field_validator("kind", mode="before")
+    def set_default_if_none(cls, v):
+        return v if v is not None else "ServiceAccount"
 
 
 class ExtendedProperties(NodeProperties):

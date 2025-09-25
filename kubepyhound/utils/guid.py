@@ -28,3 +28,12 @@ def get_guid(
     resource_path = f"{name}.{resource_type.value}.{namespace}.{cluster}"
     # print(resource_path)
     return str(uuid.uuid5(uuid_namespace, resource_path))
+
+
+def get_generic_guid(
+    name: str, resource_type: str, cluster: str, namespace: str = "__global__"
+) -> str:
+    uuid_namespace = uuid.NAMESPACE_DNS
+    resource_path = f"{name}.{resource_type}.{namespace}.{cluster}"
+    # print()
+    return str(uuid.uuid5(uuid_namespace, resource_path))

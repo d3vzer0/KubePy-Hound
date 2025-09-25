@@ -8,7 +8,7 @@ from pydantic import (
 )
 from abc import ABC, abstractmethod
 from typing import Optional
-from kubepyhound.utils.guid import get_guid, NodeTypes
+from kubepyhound.utils.guid import get_guid, NodeTypes, get_generic_guid
 from datetime import datetime
 from kubepyhound.utils.lookup import LookupManager
 
@@ -74,9 +74,21 @@ class Node(BaseModel, ABC):
         scope = (
             "__global__" if not self.properties.namespace else self.properties.namespace
         )
-        dyn_uid = get_guid(
-            self.properties.name, NodeTypes[self.kinds[0]], self._cluster, scope
-        )
+        if self.kinds[0] in NodeTypes:
+            dyn_uid = get_guid(
+                self.properties.name, NodeTypes[self.kinds[0]], self._cluster, scope
+            )
+        else:
+            if "kube-root-ca.crt" in self.properties.name:
+                print(self.properties.name, self.kinds[0], self._cluster, scope)
+                print(
+                    get_generic_guid(
+                        self.properties.name, self.kinds[0], self._cluster, scope
+                    )
+                )
+            dyn_uid = get_generic_guid(
+                self.properties.name, self.kinds[0], self._cluster, scope
+            )
         return dyn_uid
 
     @classmethod
