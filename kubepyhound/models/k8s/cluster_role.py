@@ -109,8 +109,8 @@ class ClusterRoleNode(Node):
         for verb in verbs:
             for key in VERB_TO_PERMISSION.keys():
                 if fnmatch.fnmatch(key, verb.value) and key != "*":
-                    matched.append(verb.value)
-
+                    matched.append(key)
+                    # matched.append(verb.value)
         return matched
 
     def _rule_edge(self, rule: Rule):
@@ -119,7 +119,7 @@ class ClusterRoleNode(Node):
 
         start_path = EdgePath(value=self.id, match_by="id")
         matched_verbs = self._matching_verbs(rule.verbs)
-        verb_permissions = [VERB_TO_PERMISSION[verb] for verb in matched_verbs]
+        # verb_permissions = [VERB_TO_PERMISSION[verb] for verb in matched_verbs]
 
         all_allowed_resources = []
         for resource in rule.resources:
@@ -128,17 +128,29 @@ class ClusterRoleNode(Node):
 
         targets = []
         for name, kind, singular, rd in all_allowed_resources:
-            for verb_permission in verb_permissions:
-                targets.append(
-                    Edge(
-                        kind=verb_permission,
-                        start=start_path,
-                        end=EdgePath(
-                            value=get_generic_guid(name, f"K8s{kind}", self._cluster),
-                            match_by="id",
-                        ),
-                    )
+            targets.append(
+                Edge(
+                    kind="K8sHasPermissions",
+                    start=start_path,
+                    end=EdgePath(
+                        value=get_generic_guid(name, f"K8s{kind}", self._cluster),
+                        match_by="id",
+                    ),
+                    properties={"verbs": matched_verbs},
                 )
+            )
+            # for verb_permission in verb_permissions:
+            #     # print(verb_permission)
+            #     targets.append(
+            #         Edge(
+            #             kind=verb_permission,
+            #             start=start_path,
+            #             end=EdgePath(
+            #                 value=get_generic_guid(name, f"K8s{kind}", self._cluster),
+            #                 match_by="id",
+            #             ),
+            #         )
+            #     )
 
         return targets
 
