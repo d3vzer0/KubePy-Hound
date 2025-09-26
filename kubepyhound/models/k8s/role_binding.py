@@ -103,6 +103,36 @@ class RoleBindingNode(Node):
         return edge
 
     @property
+    def _sc_role_to_account_edge(self):
+        """This is a shortcut from service account to role, which is normally done via
+        account <- role-binding -> role"""
+        edges = []
+        role_id = get_guid(
+            self.properties.role_ref,
+            NodeTypes.K8sScopedRole,
+            self._cluster,
+            namespace=self.properties.namespace,
+        )
+        end_path = EdgePath(value=role_id, match_by="id")
+        for target in self.properties.subjects:
+            account_id = get_guid(
+                target.name,
+                NodeTypes.K8sServiceAccount,
+                self._cluster,
+                namespace=self.properties.namespace,
+            )
+            start_path = EdgePath(value=account_id, match_by="id")
+            edges.append(
+                Edge(
+                    kind="K8sInheritsRole",
+                    start=start_path,
+                    end=end_path,
+                    properties={"composed": True},
+                )
+            )
+        return edges
+
+    @property
     def _subjects(self):
         edges = []
         start_path = EdgePath(value=self.id, match_by="id")
@@ -149,7 +179,12 @@ class RoleBindingNode(Node):
     @property
     def edges(self):
         all_edges = self._subjects
-        return [self._namespace_edge, self._role_edge, *all_edges]
+        return [
+            self._namespace_edge,
+            self._role_edge,
+            *all_edges,
+            *self._sc_role_to_account_edge,
+        ]
 
     @classmethod
     def from_input(cls, **kwargs) -> "RoleBindingNode":

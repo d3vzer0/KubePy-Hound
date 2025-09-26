@@ -53,7 +53,11 @@ class Metadata(BaseModel):
     uid: str
     namespace: str
     creation_timestamp: datetime
-    labels: dict
+    labels: dict | None = {}
+
+    @field_validator("labels", mode="before")
+    def set_default_if_none(cls, v):
+        return v if v is not None else {}
 
 
 class Pod(BaseModel):
