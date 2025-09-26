@@ -79,13 +79,6 @@ class Node(BaseModel, ABC):
                 self.properties.name, NodeTypes[self.kinds[0]], self._cluster, scope
             )
         else:
-            if "kube-root-ca.crt" in self.properties.name:
-                print(self.properties.name, self.kinds[0], self._cluster, scope)
-                print(
-                    get_generic_guid(
-                        self.properties.name, self.kinds[0], self._cluster, scope
-                    )
-                )
             dyn_uid = get_generic_guid(
                 self.properties.name, self.kinds[0], self._cluster, scope
             )

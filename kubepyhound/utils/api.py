@@ -4,6 +4,7 @@ import hashlib
 import base64
 import datetime
 from datetime import timedelta
+import json
 
 
 class BloodHound:
@@ -69,6 +70,13 @@ class BloodHound:
     #     else:
     #         print("Issue with uploading job")
     #         print(response.json())
+
+    def query(self, query: str):
+        path = "/api/v2/graphs/cypher"
+        response = self.request(
+            method="POST", path=path, body=json.dumps({"query": query}).encode()
+        )
+        return response
 
     def saved_query(self, body: str):
         path = "/api/v2/saved-queries"

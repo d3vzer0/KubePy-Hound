@@ -64,39 +64,27 @@ class ClusterRoleBindingNode(Node):
     properties: ExtendedProperties
 
     @property
+    def _role_path(self):
+        role_id = get_guid(
+            self.properties.role_ref,
+            NodeTypes.K8sClusterRole,
+            self._cluster,
+        )
+        edge_path = EdgePath(value=role_id, match_by="id")
+        return edge_path
+
+    @property
     def _role_edge(self):
-        # target_id = self._lookup.cluster_roles(self.properties.role_ref)
-        target_id = get_guid(
-            self.properties.role_ref, NodeTypes.K8sClusterRole, self._cluster
-        )
         start_path = EdgePath(value=self.id, match_by="id")
-        end_path = EdgePath(value=target_id, match_by="id")
-        edge = Edge(kind="K8sReferencesRole", start=start_path, end=end_path)
-        return edge
+        return Edge(kind="K8sReferencesRole", start=start_path, end=self._role_path)
 
-    def _service_account(self, start_path, target, namespace):
-        # target_id = self._lookup.service_accounts(target.name, namespace)
-        # if not target_id:
-        #     source_ref = SourceRef(name=self.properties.name, uid=self.id)
-        #     self._stale_collection.add(
-        #         StaleReference(
-        #             resource_type="K8sServiceAccount",
-        #             name=target.name,
-        #             source_ref=source_ref,
-        #             edge_type="K8sAuthorizes",
-        #         )
-        #     )
-        #     return None
-
-        # else:
+    def _service_account_path(self, target: str, namespace):
         target_id = get_guid(
-            target.name, NodeTypes.K8sServiceAccount, self._cluster, namespace
+            target, NodeTypes.K8sServiceAccount, self._cluster, namespace
         )
-        end_path = EdgePath(value=target_id, match_by="id")
-        return Edge(kind="K8sAuthorizes", start=start_path, end=end_path)
+        return EdgePath(value=target_id, match_by="id")
 
     def _get_target_user(self, target_name: str) -> "EdgePath":
-        # target_id = self._lookup.users(target_name)
         target_id = get_guid(target_name, NodeTypes.K8sUser, self._cluster)
         return EdgePath(value=target_id, match_by="id")
 
@@ -106,63 +94,38 @@ class ClusterRoleBindingNode(Node):
         return EdgePath(value=target_id, match_by="id")
 
     @property
-    def _sc_role_to_account_edge(self):
-        """This is a shortcut from service account to role, which is normally done via
-        account <- role-binding -> role"""
-        edges = []
-        role_id = get_guid(
-            self.properties.role_ref,
-            NodeTypes.K8sClusterRole,
-            self._cluster,
-        )
-        end_path = EdgePath(value=role_id, match_by="id")
-        for target in self.properties.subjects:
-            account_id = get_guid(
-                target.name,
-                NodeTypes.K8sServiceAccount,
-                self._cluster,
-            )
-            start_path = EdgePath(value=account_id, match_by="id")
-            edges.append(
-                Edge(
-                    kind="K8sInheritsRole",
-                    start=start_path,
-                    end=end_path,
-                    properties={"composed": True},
-                )
-            )
-        return edges
-
-    @property
     def _subjects(self):
         edges = []
-        start_path = EdgePath(value=self.id, match_by="id")
+        rb_path = EdgePath(value=self.id, match_by="id")
         for target in self.properties.subjects:
             if target.kind == "ServiceAccount":
                 namespace = target.namespace
-                # if namespace in self._lookup.service_accounts:
-                get_service_account_edge = self._service_account(
-                    start_path, target, namespace
+                get_sa_path = self._service_account_path(target.name, namespace)
+                sa_edge = Edge(kind="K8sAuthorizes", start=rb_path, end=get_sa_path)
+
+                role_edge = Edge(
+                    kind="K8sInheritsRole",
+                    start=get_sa_path,
+                    end=self._role_path,
+                    properties={"composed": True},
                 )
-                # TODO CHECK NONE
-                if get_service_account_edge:
-                    edges.append(get_service_account_edge)
-                    # else:
-                    # print(f"Unsupported subject kind: {target.kind} in ClusterRoleBinding {self.properties.name}")
+
+                edges.append(sa_edge)
+                edges.append(role_edge)
 
             elif target.kind == "User":
                 end_path = self._get_target_user(target.name)
-                edges.append(Edge(kind="K8sAuthorizes", start=start_path, end=end_path))
+                edges.append(Edge(kind="K8sAuthorizes", start=rb_path, end=end_path))
 
             elif target.kind == "Group":
                 end_path = self._get_target_group(target.name)
-                edges.append(Edge(kind="K8sAuthorizes", start=start_path, end=end_path))
+                edges.append(Edge(kind="K8sAuthorizes", start=rb_path, end=end_path))
 
         return edges
 
     @property
     def edges(self):
-        return [self._role_edge, *self._subjects, *self._sc_role_to_account_edge]
+        return [self._role_edge, *self._subjects]
 
     @classmethod
     def from_input(cls, **kwargs) -> "ClusterRoleBindingNode":
