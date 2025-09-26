@@ -99,8 +99,7 @@ class ClusterRoleBindingNode(Node):
         rb_path = EdgePath(value=self.id, match_by="id")
         for target in self.properties.subjects:
             if target.kind == "ServiceAccount":
-                namespace = target.namespace
-                get_sa_path = self._service_account_path(target.name, namespace)
+                get_sa_path = self._service_account_path(target.name, target.namespace)
                 sa_edge = Edge(kind="K8sAuthorizes", start=rb_path, end=get_sa_path)
 
                 role_edge = Edge(
