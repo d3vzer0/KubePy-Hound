@@ -66,7 +66,7 @@ class RoleBindingNode(Node):
         return EdgePath(value=target_id, match_by="id")
 
     def _get_target_group(self, target_name: str) -> "EdgePath":
-        target_id = get_guid(target_name, NodeTypes.K8sUser, self._cluster)
+        target_id = get_guid(target_name, NodeTypes.K8sGroup, self._cluster)
         return EdgePath(value=target_id, match_by="id")
 
     def _service_account_path(self, target: str, namespace):
@@ -123,17 +123,6 @@ class RoleBindingNode(Node):
 
                 edges.append(sa_edge)
                 edges.append(role_edge)
-
-                # if not target_id:
-                #     source_ref = SourceRef(name=self.properties.name, uid=self.id)
-                #     self._stale_collection.add(
-                #         StaleReference(
-                #             resource_type="KubeServiceAccount",
-                #             name=target.name,
-                #             source_ref=source_ref,
-                #             edge_type="AUTHORIZES",
-                #         )
-                #     )
 
             elif target.kind == "User":
                 end_path = self._get_target_user(target.name)
