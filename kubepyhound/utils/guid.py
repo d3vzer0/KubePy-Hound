@@ -17,6 +17,10 @@ class NodeTypes(str, Enum):
     K8sResourceGroup = "K8sResourceGroup"
     K8sUser = "K8sUser"
     K8sGroup = "K8sGroup"
+    K8sReplicaSet = "K8sReplicaSet"
+    K8sStatefulSet = "K8sStatefulSet"
+    K8sDeployment = "K8sDeployment"
+    K8sDaemonSet = "K8sDaemonSet"
 
 
 def get_guid(

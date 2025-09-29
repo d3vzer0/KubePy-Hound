@@ -53,6 +53,7 @@ class Deployment(BaseModel):
 
 class ExtendedProperties(NodeProperties):
     model_config = ConfigDict(extra="allow")
+    namespace: str
 
 
 class DeploymentNode(Node):

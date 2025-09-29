@@ -13,7 +13,10 @@ from kubepyhound.models.k8s.cluster_role import ClusterRoleNode
 from kubepyhound.models.k8s.service_account import ServiceAccountNode
 from kubepyhound.models.k8s.resource_group import ResourceGroupNode
 from kubepyhound.models.k8s.resource import ResourceNode, CustomResourceNode
-
+from kubepyhound.models.k8s.statefulset import StatefulSetNode
+from kubepyhound.models.k8s.replicaset import ReplicaSetNode
+from kubepyhound.models.k8s.deployment import DeploymentNode
+from kubepyhound.models.k8s.daemonset import DaemonSetNode
 from kubepyhound.models.k8s.generic import GenericNode
 from kubepyhound.models.k8s.stale import StaleNode
 from kubepyhound.models.k8s.dynamic import DynamicNode
@@ -38,6 +41,10 @@ KUBE_ICONS = {
     "K8sCluster": "globe",
     "K8sNode": "server",
     "K8sPod": "cube",
+    "K8sReplicaSet": "cubes",
+    "K8sDeployment": "cubes",
+    "K8sStatefulSet": "cubes",
+    "K8sDaemonSet": "cubes",
     "K8sNamespace": "folder",
     "K8sRole": "id-badge",
     "K8sRoleBinding": "link",
@@ -323,6 +330,34 @@ def shared_commands(app: typer.Typer):
         return process_resources(resource_files, UserNode, ctx.obj)
 
     @app.command()
+    def statefulsets(ctx: typer.Context):
+        resource_files = glob.glob(
+            f"{ctx.obj.input}/namespaces/**/statefulsets/*.json", recursive=True
+        )
+        return process_resources(resource_files, StatefulSetNode, ctx.obj)
+
+    @app.command()
+    def deployments(ctx: typer.Context):
+        resource_files = glob.glob(
+            f"{ctx.obj.input}/namespaces/**/deployments/*.json", recursive=True
+        )
+        return process_resources(resource_files, DeploymentNode, ctx.obj)
+
+    @app.command()
+    def replicasets(ctx: typer.Context):
+        resource_files = glob.glob(
+            f"{ctx.obj.input}/namespaces/**/replicasets/*.json", recursive=True
+        )
+        return process_resources(resource_files, ReplicaSetNode, ctx.obj)
+
+    @app.command()
+    def daemonsets(ctx: typer.Context):
+        resource_files = glob.glob(
+            f"{ctx.obj.input}/namespaces/**/daemonsets/*.json", recursive=True
+        )
+        return process_resources(resource_files, DaemonSetNode, ctx.obj)
+
+    @app.command()
     def eks(ctx: typer.Context):
         resource_files = glob.glob(
             f"{ctx.obj.input}/identities/aws/**/*.json", recursive=True
@@ -369,6 +404,10 @@ def shared_commands(app: typer.Typer):
             ("namespaces", namespaces),
             ("nodes", nodes),
             ("pods", pods),
+            ("deployments", deployments),
+            ("daemonsets", daemonsets),
+            ("replicasets", replicasets),
+            ("statefulsets", statefulsets),
             ("users", users),
             ("groups", groups),
             ("roles", roles),
