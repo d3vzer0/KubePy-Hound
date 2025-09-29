@@ -15,6 +15,10 @@ from kubepyhound.models.k8s.endpoint_slice import EndpointSlice
 from kubepyhound.models.k8s.service import Service
 from kubepyhound.models.k8s.identities import User, Group
 from kubepyhound.models.k8s.dynamic import DynamicResource
+from kubepyhound.models.k8s.deployment import Deployment
+from kubepyhound.models.k8s.statefulset import StatefulSet
+from kubepyhound.models.k8s.replicaset import ReplicaSet
+from kubepyhound.models.k8s.daemonset import DaemonSet
 from kubepyhound.models.eks.user import IAMUser
 from kubepyhound.utils.helpers import DumpClient
 from kubepyhound.utils.mapper import NamespaceResourceMapper
@@ -46,6 +50,10 @@ RESOURCE_TYPES = {
     "RoleBinding": RoleBinding,
     "ClusterRole": ClusterRoleBinding,
     "ClusterRoleBinding": Cluster,
+    "ReplicaSet": ReplicaSet,
+    "DaemonSet": DaemonSet,
+    "StatefulSet": StatefulSet,
+    "Deployment": Deployment,
     # "Service": ServiceNode
 }
 
@@ -132,6 +140,86 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
 
 
 @dump_app.command()
+@progress_handler("daemonsets")
+def daemonsets(ctx: typer.Context, output_dir: OutputPath):
+    dump_client: DumpClient = ctx.obj.client
+    resource_count = 0
+
+    v1 = client.AppsV1Api()
+    replicasets = v1.list_daemon_set_for_all_namespaces()
+    for replica in replicasets.items:
+        replica_set = DaemonSet(**replica.to_dict())
+        dump_client.write(
+            replica_set,
+            name=replica_set.metadata.name,
+            resource="daemonsets",
+            namespace=replica_set.metadata.namespace,
+        )
+        resource_count += 1
+    return resource_count
+
+
+@dump_app.command()
+@progress_handler("statefulset")
+def statefulsets(ctx: typer.Context, output_dir: OutputPath):
+    dump_client: DumpClient = ctx.obj.client
+    resource_count = 0
+
+    v1 = client.AppsV1Api()
+    replicasets = v1.list_stateful_set_for_all_namespaces()
+    for replica in replicasets.items:
+        replica_set = StatefulSet(**replica.to_dict())
+        dump_client.write(
+            replica_set,
+            name=replica_set.metadata.name,
+            resource="statefulsets",
+            namespace=replica_set.metadata.namespace,
+        )
+        resource_count += 1
+    return resource_count
+
+
+@dump_app.command()
+@progress_handler("replicasets")
+def replicasets(ctx: typer.Context, output_dir: OutputPath):
+    dump_client: DumpClient = ctx.obj.client
+    resource_count = 0
+
+    v1 = client.AppsV1Api()
+    replicasets = v1.list_replica_set_for_all_namespaces()
+    for replica in replicasets.items:
+        replica_set = ReplicaSet(**replica.to_dict())
+        dump_client.write(
+            replica_set,
+            name=replica_set.metadata.name,
+            resource="replicasets",
+            namespace=replica_set.metadata.namespace,
+        )
+        resource_count += 1
+    return resource_count
+
+
+@dump_app.command()
+@progress_handler("deployments")
+def deployments(ctx: typer.Context, output_dir: OutputPath):
+    dump_client: DumpClient = ctx.obj.client
+    resource_count = 0
+
+    v1 = client.AppsV1Api()
+    deployments = v1.list_deployment_for_all_namespaces()
+    for deployment in deployments.items:
+        dp_object = Deployment(**deployment.to_dict())
+        dump_client.write(
+            dp_object,
+            name=dp_object.metadata.name,
+            resource="deployments",
+            namespace=dp_object.metadata.namespace,
+        )
+        resource_count += 1
+    return resource_count
+
+
+@dump_app.command()
 @progress_handler("pods")
 def pods(ctx: typer.Context, output_dir: OutputPath):
     dump_client: DumpClient = ctx.obj.client
@@ -140,7 +228,6 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
     v1 = client.CoreV1Api()
     pods = v1.list_pod_for_all_namespaces()
     for pod in pods.items:
-
         pod_object = Pod(**pod.to_dict())
         dump_client.write(
             pod_object,
@@ -367,9 +454,11 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
         resources = custom.get_api_resources(
             group=group_object.name, version=group_object.preferred_version.version
         )
-        for resource in resources.to_dict()["resources"]:
+        for resource in resources.resources:
             resource_object = Resource(
-                **resource, api_group_name=group.name, api_group_uid=group_object.uid
+                **resource.to_dict(),
+                api_group_name=group.name,
+                api_group_uid=group_object.uid,
             )
             dump_client.write(
                 resource_object,
@@ -390,16 +479,15 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 
     v1 = client.CoreV1Api()
     core_resources = v1.get_api_resources()
+    core_group = ResourceGroup(
+        name="__core__",
+        preferred_version=GroupVersion(group_version="v1", version="v1"),
+        versions=[GroupVersion(group_version="v1", version="v1")],
+    )
+    dump_client.write(
+        core_group, name=core_group.name, resource="api_groups", namespace=None
+    )
     for core_resource in core_resources.resources:
-        core_group = ResourceGroup(
-            name="__core__",
-            preferred_version=GroupVersion(group_version="v1", version="v1"),
-            versions=[GroupVersion(group_version="v1", version="v1")],
-        )
-        dump_client.write(
-            core_group, name=core_group.name, resource="api_groups", namespace=None
-        )
-
         core_resource_object = Resource(
             **core_resource.to_dict(),
             api_group_name=core_group.name,
@@ -425,23 +513,27 @@ def generic(ctx: typer.Context, output_dir: OutputPath):
     dyn_client = DynamicClient(api_client)
 
     discovered_resources = dyn_client.resources.search()
+    # Only check for resources that have no custom model,
+    # support the list command and or not of kind *List
     for resource in discovered_resources:
-        # Only check for resources that support the list command and or not of kind *List
-        if not resource.kind.endswith("List") and "list" in resource.verbs:
+        if (
+            not resource.kind in RESOURCE_TYPES
+            and not resource.kind.endswith("List")
+            and "list" in resource.verbs
+        ):
             resource_client = dyn_client.resources.get(
                 api_version=resource.api_version, kind=resource.kind
             )
             items = resource_client.get()
             for item in items.items:
                 generic_model = Generic(**item.to_dict())
-                if not generic_model.kind in RESOURCE_TYPES:
-                    resource_count += 1
-                    dump_client.write(
-                        generic_model,
-                        name=generic_model.metadata.name,
-                        resource=f"unmapped/{generic_model.kind}",
-                        namespace=generic_model.metadata.namespace,
-                    )
+                resource_count += 1
+                dump_client.write(
+                    generic_model,
+                    name=generic_model.metadata.name,
+                    resource=f"unmapped/{generic_model.kind}",
+                    namespace=generic_model.metadata.namespace,
+                )
 
     return resource_count
 
@@ -459,6 +551,8 @@ def bootstrap(
             resolve_path=True,
         ),
     ] = Path("kubepyhound/duckdb/tables"),
+    *args,
+    **kwargs,
 ):
     bootstrap_files = glob.glob(f"{queries_path}/*.sql")
     con = duckdb.connect(database="k8s.duckdb", read_only=False)
@@ -481,11 +575,15 @@ def all(ctx: typer.Context, output_dir: OutputPath):
         ("cluster_roles", cluster_roles),
         ("cluster_role_bindings", cluster_role_bindings),
         ("service_accounts", service_accounts),
-        # ("endpoint_slices", endpoint_slices),
+        ("statefulsets", statefulsets),
+        ("replicasets", replicasets),
+        ("daemonsets", daemonsets),
+        ("deployments", deployments),
         ("services", services),
         ("resource_definitions", resource_definitions),
         ("custom_resource_definitions", custom_resource_definitions),
         ("generic", generic),
+        ("db", bootstrap),
     ]
 
     for _, func in dump_functions:
