@@ -36,7 +36,9 @@ class UserNode(Node):
     @classmethod
     def from_input(cls, **kwargs) -> "UserNode":
         model = User(**kwargs)
-        properties = NodeProperties(name=model.name, displayname=model.name, uid="")
+        properties = NodeProperties(
+            name=model.name, displayname=model.name, uid="", namespace=None
+        )
         return cls(kinds=["K8sUser"], properties=properties)
 
 
@@ -48,5 +50,7 @@ class GroupNode(Node):
     @classmethod
     def from_input(cls, **kwargs) -> "GroupNode":
         model = Group(**kwargs)
-        properties = NodeProperties(name=model.name, displayname=model.name, uid="")
+        properties = NodeProperties(
+            name=model.name, displayname=model.name, uid="", namespace=None
+        )
         return cls(kinds=["K8sGroup"], properties=properties)

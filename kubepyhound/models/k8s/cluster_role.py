@@ -174,6 +174,7 @@ class ClusterRoleNode(Node):
             displayname=model.metadata.name,
             rules=model.rules,
             uid=model.metadata.uid,
+            namespace=None,
         )
         return cls(
             kinds=["K8sClusterRole", "K8sRole"],

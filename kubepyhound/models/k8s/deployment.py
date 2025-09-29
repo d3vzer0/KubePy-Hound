@@ -58,6 +58,10 @@ class ExtendedProperties(NodeProperties):
 class DeploymentNode(Node):
     properties: ExtendedProperties
 
+    @property
+    def edges(self):
+        return []
+
     @classmethod
     def from_input(cls, **kwargs) -> "DeploymentNode":
         model = Deployment(**kwargs)

@@ -135,6 +135,7 @@ class ClusterRoleBindingNode(Node):
             role_ref=model.role_ref.name,
             subjects=model.subjects,
             uid=model.metadata.uid,
+            namespace=None,
         )
         return cls(
             kinds=["K8sClusterRoleBinding", "K8sRoleBinding"],

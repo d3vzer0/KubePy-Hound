@@ -40,6 +40,6 @@ class ResourceGroupNode(Node):
     def from_input(cls, **kwargs) -> "ResourceGroupNode":
         model = ResourceGroup(**kwargs)
         properties = NodeProperties(
-            name=model.name, displayname=model.name, uid=model.uid
+            name=model.name, displayname=model.name, uid=model.uid, namespace=None
         )
         return cls(kinds=["K8sResourceGroup"], properties=properties)

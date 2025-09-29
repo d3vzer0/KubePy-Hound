@@ -65,6 +65,7 @@ class NodeOutput(GraphNode):
             name=node_out.metadata.name,
             displayname=node_out.metadata.name,
             uid=node_out.metadata.uid,
+            namespace=None,
         )
         # resource_path = f"{properties.name}.{NodeTypes.K8sNode.value}.system.a0704eb1-8213-5055-b822-238ec31feeca"
         # print(resource_path)

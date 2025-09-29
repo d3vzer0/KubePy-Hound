@@ -58,6 +58,10 @@ class ExtendedProperties(NodeProperties):
 class StatefulSetNode(Node):
     properties: ExtendedProperties
 
+    @property
+    def edges(self):
+        return []
+
     @classmethod
     def from_input(cls, **kwargs) -> "StatefulSetNode":
         model = StatefulSet(**kwargs)

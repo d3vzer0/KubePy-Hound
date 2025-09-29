@@ -58,6 +58,10 @@ class ExtendedProperties(NodeProperties):
 class DaemonSetNode(Node):
     properties: ExtendedProperties
 
+    @property
+    def edges(self):
+        return []
+
     @classmethod
     def from_input(cls, **kwargs) -> "DaemonSetNode":
         model = DaemonSet(**kwargs)

@@ -67,9 +67,8 @@ class ResourceNode(Node):
         properties = ExtendedProperties(
             name=model.name,
             displayname=model.name,
-            # objectid=model.uid,
             kind=model.kind,
-            # group=model.group,
+            namespace=None,
             api_group_name=model.api_group_name,
             api_group_uid=model.api_group_uid,
             uid=model.uid,
@@ -108,9 +107,8 @@ class CustomResourceNode(Node):
         properties = ExtendedProperties(
             name=model.name,
             displayname=model.name,
-            # objectid=model.uid,
+            namespace=None,
             kind=model.kind,
-            # group=model.group,
             api_group_name=model.api_group_name,
             api_group_uid=model.api_group_uid,
             uid=model.uid,

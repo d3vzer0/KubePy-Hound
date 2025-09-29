@@ -24,6 +24,6 @@ class ClusterNode(Node):
     def from_input(cls, **kwargs) -> "ClusterNode":
         cluster = Cluster(**kwargs)
         properties = NodeProperties(
-            name=cluster.name, displayname=cluster.name, uid=cluster.uid
+            name=cluster.name, displayname=cluster.name, uid=cluster.uid, namespace=None
         )
         return cls(kinds=["K8sCluster"], properties=properties)

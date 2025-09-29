@@ -41,5 +41,6 @@ class NamespaceNode(Node):
             name=ns_node.metadata.name,
             displayname=ns_node.metadata.name,
             uid=ns_node.metadata.uid,
+            namespace=None,
         )
         return cls(kinds=["K8sNamespace"], properties=properties)

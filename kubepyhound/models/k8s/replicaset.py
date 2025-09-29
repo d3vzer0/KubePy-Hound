@@ -46,6 +46,10 @@ class ExtendedProperties(NodeProperties):
 class ReplicaSetNode(Node):
     properties: ExtendedProperties
 
+    @property
+    def edges(self):
+        return []
+
     @classmethod
     def from_input(cls, **kwargs) -> "ReplicaSetNode":
         model = ReplicaSet(**kwargs)
