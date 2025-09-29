@@ -5,12 +5,13 @@ from pydantic import (
     BeforeValidator,
     computed_field,
     field_validator,
+    PrivateAttr,
 )
 from datetime import datetime
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from typing import Optional, Any, TypeVar, Annotated
 from pydantic_core import PydanticUseDefault
-from kubepyhound.utils.guid import get_guid
+from kubepyhound.utils.guid import get_guid, get_generic_guid
 from kubepyhound.utils.guid import NodeTypes
 
 
@@ -48,12 +49,21 @@ class Spec(BaseModel):
     containers: list[Container]
 
 
+class OwnerReferences(BaseModel):
+    api_version: str
+    controller: bool
+    kind: str
+    name: str
+    uid: str
+
+
 class Metadata(BaseModel):
     name: str
     uid: str
     namespace: str
     creation_timestamp: datetime
     labels: dict | None = {}
+    owner_references: list[OwnerReferences] | None = None
 
     @field_validator("labels", mode="before")
     def set_default_if_none(cls, v):
@@ -72,21 +82,20 @@ class Pod(BaseModel):
 
 class ExtendedProperties(NodeProperties):
     model_config = ConfigDict(extra="allow")
-    # namespace: str
+    namespace: str
     node_name: str | None = None
     service_account_name: str
 
 
 class PodNode(Node):
     properties: ExtendedProperties
+    _pod: Pod = PrivateAttr()
 
     @property
     def _namespace_edge(self):
-        # target_id = self._lookup.namespaces(self.properties.namespace)
         target_id = get_guid(
             self.properties.namespace, NodeTypes.K8sNamespace, self._cluster
         )
-        # print(self.properties.namespace, NodeTypes.K8sNamespace.value, self._cluster)
         start_path = EdgePath(value=self.id, match_by="id")
         end_path = EdgePath(value=target_id, match_by="id")
         edge = Edge(kind="K8sBelongsTo", start=start_path, end=end_path)
@@ -94,23 +103,19 @@ class PodNode(Node):
 
     @property
     def _node_edge(self):
-        # target_id = self._lookup.nodes(self.properties.node_name)
-        # print(self.properties.node_name, NodeTypes.K8sNode.name, self._cluster)
-        target_id = get_guid(
-            self.properties.node_name, NodeTypes.K8sNode, self._cluster
-        )
-        # resource_path = f"{self.properties.node_name}.{NodeTypes.K8sNode.value}.system.{self._cluster}"
-
-        start_path = EdgePath(value=self.id, match_by="id")
-        end_path = EdgePath(value=target_id, match_by="id")
-        edge = Edge(kind="K8sRunsOn", start=start_path, end=end_path)
-        return edge
+        if self.properties.node_name:
+            target_id = get_guid(
+                self.properties.node_name, NodeTypes.K8sNode, self._cluster
+            )
+            start_path = EdgePath(value=self.id, match_by="id")
+            end_path = EdgePath(value=target_id, match_by="id")
+            edge = Edge(kind="K8sRunsOn", start=start_path, end=end_path)
+            return edge
+        else:
+            return None
 
     @property
     def _service_account_edge(self):
-        # target_id = self._lookup.service_accounts(
-        #     self.properties.namespace, self.properties.service_account_name
-        # )
         target_id = get_guid(
             self.properties.service_account_name,
             NodeTypes.K8sServiceAccount,
@@ -123,18 +128,36 @@ class PodNode(Node):
         return edge
 
     @property
+    def _owned_by(self):
+        edges = []
+        start_path = EdgePath(value=self.id, match_by="id")
+        if self._pod.metadata.owner_references:
+            for owner in self._pod.metadata.owner_references:
+                end_path_id = get_generic_guid(
+                    owner.name,
+                    f"K8s{owner.kind}",
+                    cluster=self._cluster,
+                    namespace=self.properties.namespace,
+                )
+                end_path = EdgePath(value=end_path_id, match_by="id")
+                edges.append(Edge(kind="K8sOwnedBy", start=start_path, end=end_path))
+        return edges
+
+    @property
     def edges(self):
-        return [self._node_edge, self._namespace_edge, self._service_account_edge]
+        return [
+            self._node_edge,
+            self._namespace_edge,
+            self._service_account_edge,
+            *self._owned_by,
+        ]
 
     @classmethod
     def from_input(cls, **kwargs) -> "PodNode":
         kube_pod = Pod(**kwargs)
-        if "name" in kube_pod.metadata.labels:
-            del kube_pod.metadata.labels["name"]
         properties = ExtendedProperties(
             name=kube_pod.metadata.name,
             displayname=kube_pod.metadata.name,
-            # objectid=kube_pod.metadata.uid,
             namespace=kube_pod.metadata.namespace,
             node_name=kube_pod.spec.node_name,
             uid=kube_pod.metadata.uid,
@@ -142,4 +165,6 @@ class PodNode(Node):
             **kube_pod.metadata.labels,
             **kube_pod.spec.containers[0].security_context.model_dump(),
         )
-        return cls(kinds=["K8sPod"], properties=properties)
+        node = cls(kinds=["K8sPod"], properties=properties)
+        node._pod = kube_pod
+        return node
