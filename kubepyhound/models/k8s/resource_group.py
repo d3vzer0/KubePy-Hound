@@ -15,19 +15,11 @@ class ResourceGroup(BaseModel):
     api_version: Optional[str] = None
     preferred_version: GroupVersion
     versions: list[GroupVersion]
-    # uid: Optional[str] = None
 
     @computed_field
     @property
     def uid(self) -> str:
         return get_guid(self.name, NodeTypes.K8sResourceGroup, "")
-
-    # @model_validator(mode="after")
-    # def set_guid(self) -> Self:
-    #     self.uid = get_guid(
-    #         self.name, scope="system", kube_type="resource_group", name=self.name
-    #     )
-    #     return self
 
 
 class ResourceGroupNode(Node):

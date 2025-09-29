@@ -13,9 +13,6 @@ class LookupManager:
         self.directory = directory
         self._cluster: Optional[Dict] = None
         self.db = "data"
-        # self.con: DuckDBPyConnection = duckdb.connect(
-        #     database="k8s.duckdb", read_only=False
-        # )
         self.con: DuckDBPyConnection = duckdb.connect()
 
     def _load_json(self, filename: str) -> Dict[str, Any]:
