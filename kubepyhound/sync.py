@@ -1,4 +1,4 @@
-from kubepyhound.models.graph import GraphEntries, MetaData, Graph
+from kubepyhound.models.graph import GraphEntries, Graph
 from kubepyhound.models.entries import Node as GraphNode
 from kubepyhound.models.icons import CustomNode, CustomNodeIcon, CustomNodeType
 from kubepyhound.models.k8s.cluster import ClusterNode
@@ -21,18 +21,18 @@ from kubepyhound.models.k8s.generic import GenericNode
 from kubepyhound.models.k8s.stale import StaleNode
 from kubepyhound.models.k8s.dynamic import DynamicNode
 from kubepyhound.models.eks.user import IAMUserNode
+from kubepyhound.models.k8s.volume import VolumeNode
 from typing_extensions import Annotated
 from dataclasses import dataclass
 from pathlib import Path
 from kubepyhound.utils.helpers import load_json, process_stale_refs
 from rich.progress import Progress
 from typing import Type, TypeVar
-import glob
-import typer
 from kubepyhound.utils.api import BloodHound
 from kubepyhound.utils.lookup import LookupManager
 import duckdb
-
+import glob
+import typer
 
 T = TypeVar("T", bound=GraphNode)
 E = TypeVar("E", bound=GraphEntries)
@@ -59,6 +59,7 @@ KUBE_ICONS = {
     "K8sResource": "gear",
     "K8sResourceGroup": "gears",
     "K8sSecret": "key",
+    "K8sVolume": "folder",
 }
 
 sync_app = typer.Typer()
@@ -272,6 +273,13 @@ def roles(ctx: typer.Context):
 
 @sync_app.command()
 @convert_app.command()
+def volumes(ctx: typer.Context):
+    resource_files = glob.glob(f"{ctx.obj.input}/volumes/*.json", recursive=True)
+    process_resources(resource_files, VolumeNode, ctx.obj)
+
+
+@sync_app.command()
+@convert_app.command()
 # @process_stale_refs("rolebindings", output_dir="./output")
 def role_bindings(ctx: typer.Context):
     resource_files = glob.glob(
@@ -424,18 +432,16 @@ def generic(ctx: typer.Context):
 @sync_app.command()
 def icons(ctx: typer.Context):
     for node_name, icon_name in KUBE_ICONS.items():
-        if node_name.startswith("AWS"):
-            node_icon = CustomNodeIcon(
-                type="font-awesome", name=icon_name, color="#F4B942"
-            )
-        else:
-            node_icon = CustomNodeIcon(
-                type="font-awesome", name=icon_name, color="#FFFFFF"
-            )
+        # if node_name.startswith("AWS"):
+        #     node_icon = CustomNodeIcon(
+        #         type="font-awesome", name=icon_name, color="#F4B942"
+        #     )
+        # else:
+        node_icon = CustomNodeIcon(type="font-awesome", name=icon_name, color="#FFFFFF")
         node_type = CustomNodeType(icon=node_icon)
         custom_type = {"custom_types": {node_name: node_type}}
         custom = CustomNode(**custom_type)
-        response = ctx.obj.session.custom_node(custom.model_dump_json())
+        ctx.obj.session.custom_node(custom.model_dump_json())
 
 
 @sync_app.command()
@@ -463,8 +469,5 @@ def all(ctx: typer.Context):
         ("generic", generic),
     ]
 
-    # total_progress = progress.add_task(
-    #     f"[green]Converting resources to OpenGraph", total=len(sync_functions)
-    # )
     for _, func in sync_functions:
         ctx.invoke(func)

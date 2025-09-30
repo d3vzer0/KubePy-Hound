@@ -1,7 +1,7 @@
 from typing_extensions import Annotated
 from kubernetes import client, config
 from kubernetes.dynamic import DynamicClient
-from kubepyhound.models.k8s.pod import Pod
+from kubepyhound.models.k8s.pod import Pod, Volume as PodVolume
 from kubepyhound.models.k8s.namespace import Namespace
 from kubepyhound.models.k8s.node import Node
 from kubepyhound.models.k8s.role import Role
@@ -14,14 +14,13 @@ from kubepyhound.models.k8s.cluster_role_binding import ClusterRoleBinding
 from kubepyhound.models.k8s.endpoint_slice import EndpointSlice
 from kubepyhound.models.k8s.service import Service
 from kubepyhound.models.k8s.identities import User, Group
-from kubepyhound.models.k8s.dynamic import DynamicResource
 from kubepyhound.models.k8s.deployment import Deployment
 from kubepyhound.models.k8s.statefulset import StatefulSet
 from kubepyhound.models.k8s.replicaset import ReplicaSet
 from kubepyhound.models.k8s.daemonset import DaemonSet
+from kubepyhound.models.k8s.volume import Volume
 from kubepyhound.models.eks.user import IAMUser
 from kubepyhound.utils.helpers import DumpClient
-from kubepyhound.utils.mapper import NamespaceResourceMapper
 from kubepyhound.models.k8s.generic import Generic
 from kubepyhound.models.k8s.service_account import ServiceAccount
 from pathlib import Path
@@ -31,14 +30,13 @@ from rich.progress import (
     TextColumn,
     TimeElapsedColumn,
 )
-import duckdb
-import typer
-import glob
 from enum import Enum
 from dataclasses import dataclass
 from rich.console import Console
 from functools import wraps
-
+import duckdb
+import typer
+import glob
 
 IDENTITY_MAPPING = {"User": User, "Group": Group}
 RESOURCE_TYPES = {
@@ -218,6 +216,21 @@ def deployments(ctx: typer.Context):
     return resource_count
 
 
+def host_volumes(client: DumpClient, node_name: str, volumes: list[PodVolume]) -> int:
+    resource_count = 0
+    for volume in volumes:
+        if volume.host_path:
+            volume_object = Volume(node_name=node_name, path=volume.host_path.path)
+            client.write(
+                volume_object,
+                name=volume_object.uid,
+                resource="volumes",
+                namespace=None,
+            )
+            resource_count += 1
+    return resource_count
+
+
 @dump_app.command()
 @progress_handler("pods")
 def pods(ctx: typer.Context):
@@ -234,6 +247,10 @@ def pods(ctx: typer.Context):
             resource="pods",
             namespace=pod_object.metadata.namespace,
         )
+        if pod_object.spec.volumes:
+            host_volumes(
+                dump_client, pod_object.spec.node_name, pod_object.spec.volumes
+            )
         resource_count += 1
 
     return resource_count
