@@ -82,13 +82,12 @@ config.load_kube_config()
 @dump_app.callback()
 def main(
     ctx: typer.Context,
+    output_dir: OutputPath = Path("./output"),
     output_format: OutputFormat = typer.Option(
         OutputFormat.simple, "--format", case_sensitive=False
     ),
 ):
-    ctx.obj = Options(
-        client=DumpClient(base_dir=Path("./output"), mode=output_format.value)
-    )
+    ctx.obj = Options(client=DumpClient(base_dir=output_dir, mode=output_format.value))
 
 
 def progress_handler(task_name: str):
@@ -121,7 +120,7 @@ def progress_handler(task_name: str):
 
 @dump_app.command()
 @progress_handler("namespaces")
-def namespaces(ctx: typer.Context, output_dir: OutputPath):
+def namespaces(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -141,7 +140,7 @@ def namespaces(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("daemonsets")
-def daemonsets(ctx: typer.Context, output_dir: OutputPath):
+def daemonsets(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -161,7 +160,7 @@ def daemonsets(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("statefulset")
-def statefulsets(ctx: typer.Context, output_dir: OutputPath):
+def statefulsets(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -181,7 +180,7 @@ def statefulsets(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("replicasets")
-def replicasets(ctx: typer.Context, output_dir: OutputPath):
+def replicasets(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -201,7 +200,7 @@ def replicasets(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("deployments")
-def deployments(ctx: typer.Context, output_dir: OutputPath):
+def deployments(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -221,7 +220,7 @@ def deployments(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("pods")
-def pods(ctx: typer.Context, output_dir: OutputPath):
+def pods(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -242,7 +241,7 @@ def pods(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("nodes")
-def nodes(ctx: typer.Context, output_dir: OutputPath):
+def nodes(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -262,7 +261,7 @@ def nodes(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("cluster")
-def cluster(ctx: typer.Context, output_dir: OutputPath):
+def cluster(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     conf = config.list_kube_config_contexts()[1]
     cluster_object = Cluster(name=conf["context"]["cluster"])
@@ -274,7 +273,7 @@ def cluster(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("role-bindings")
-def role_bindings(ctx: typer.Context, output_dir: OutputPath):
+def role_bindings(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -303,7 +302,7 @@ def role_bindings(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("roles")
-def roles(ctx: typer.Context, output_dir: OutputPath):
+def roles(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -323,7 +322,7 @@ def roles(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("cluster-roles")
-def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
+def cluster_roles(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -343,7 +342,7 @@ def cluster_roles(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("cluster role-bindings")
-def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
+def cluster_role_bindings(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -373,7 +372,7 @@ def cluster_role_bindings(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("service accounts")
-def service_accounts(ctx: typer.Context, output_dir: OutputPath):
+def service_accounts(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -393,7 +392,7 @@ def service_accounts(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("endpoint slices")
-def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
+def endpoint_slices(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -413,7 +412,7 @@ def endpoint_slices(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("services")
-def services(ctx: typer.Context, output_dir: OutputPath):
+def services(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -433,7 +432,7 @@ def services(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("custom resource definitions")
-def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
+def custom_resource_definitions(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -473,7 +472,7 @@ def custom_resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("resource definitions")
-def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
+def resource_definitions(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -505,7 +504,7 @@ def resource_definitions(ctx: typer.Context, output_dir: OutputPath):
 
 @dump_app.command()
 @progress_handler("unmapped resources")
-def generic(ctx: typer.Context, output_dir: OutputPath):
+def generic(ctx: typer.Context):
     dump_client: DumpClient = ctx.obj.client
     resource_count = 0
 
@@ -564,7 +563,7 @@ def bootstrap(
 
 
 @dump_app.command()
-def all(ctx: typer.Context, output_dir: OutputPath):
+def all(ctx: typer.Context):
     dump_functions = [
         ("cluster", cluster),
         ("namespaces", namespaces),
@@ -587,4 +586,4 @@ def all(ctx: typer.Context, output_dir: OutputPath):
     ]
 
     for _, func in dump_functions:
-        ctx.invoke(func, ctx, output_dir=output_dir)
+        ctx.invoke(func, ctx)

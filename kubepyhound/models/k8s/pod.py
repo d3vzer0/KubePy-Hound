@@ -35,6 +35,15 @@ class VolumeMount(BaseModel):
     name: str
 
 
+class HostPath(BaseModel):
+    path: str
+
+
+class Volume(BaseModel):
+    name: str
+    host_path: HostPath | None = None
+
+
 class Container(BaseModel):
     image: str
     security_context: DefaultIfNone[SecurityContext | None] = Field(
@@ -47,6 +56,9 @@ class Spec(BaseModel):
     node_name: str | None = None
     service_account_name: Optional[str] = "default"
     containers: list[Container]
+    # volumes: list[Volume] | None = None
+
+    volumes: DefaultIfNone[list[Volume] | None] = Field(default=[])
 
 
 class OwnerReferences(BaseModel):
@@ -144,12 +156,28 @@ class PodNode(Node):
         return edges
 
     @property
+    def _volume_edges(self):
+        edges = []
+        # if self._pod.spec.volumes:
+        for volume in self._pod.spec.volumes:
+            if volume.host_path:
+                start_path_id = get_generic_guid(
+                    owner.name,
+                    f"K8s{owner.kind}",
+                    cluster=self._cluster,
+                    namespace=self.properties.namespace,
+                )
+                print(volume)
+        return edges
+
+    @property
     def edges(self):
         return [
             self._node_edge,
             self._namespace_edge,
             self._service_account_edge,
             *self._owned_by,
+            *self._volume_edges,
         ]
 
     @classmethod

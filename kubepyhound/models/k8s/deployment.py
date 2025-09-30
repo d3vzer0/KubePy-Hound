@@ -24,7 +24,7 @@ class HostPath(BaseModel):
 
 class Volume(BaseModel):
     name: str
-    hostPath: HostPath | None = None
+    host_path: HostPath | None = None
 
 
 class TemplateSpec(BaseModel):
@@ -58,6 +58,10 @@ class ExtendedProperties(NodeProperties):
 
 class DeploymentNode(Node):
     properties: ExtendedProperties
+
+    @property
+    def _volume_edges(self):
+        print()
 
     @property
     def edges(self):
