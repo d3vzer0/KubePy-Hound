@@ -8,11 +8,11 @@ from pydantic import (
     PrivateAttr,
 )
 from datetime import datetime
+from pydantic_core import PydanticUseDefault
 from kubepyhound.models.entries import Node, NodeProperties, Edge, EdgePath
 from typing import Optional, Any, TypeVar, Annotated
-from pydantic_core import PydanticUseDefault
-from kubepyhound.utils.guid import get_guid, get_generic_guid
-from kubepyhound.utils.guid import NodeTypes
+from kubepyhound.utils.guid import get_guid, get_generic_guid, NodeTypes
+from kubepyhound.models.k8s.volume import Volume as HostVolume
 
 
 def default_if_none(value: Any) -> Any:
@@ -158,16 +158,24 @@ class PodNode(Node):
     @property
     def _volume_edges(self):
         edges = []
-        # if self._pod.spec.volumes:
+        start_path = EdgePath(value=self.id, match_by="id")
         for volume in self._pod.spec.volumes:
             if volume.host_path:
-                start_path_id = get_generic_guid(
-                    owner.name,
-                    f"K8s{owner.kind}",
-                    cluster=self._cluster,
-                    namespace=self.properties.namespace,
+                volume_object = HostVolume(
+                    node_name=self.properties.node_name, path=volume.host_path.path
                 )
-                print(volume)
+                end_path_id = get_guid(
+                    volume_object.name, NodeTypes.K8sVolume, self._cluster
+                )
+                end_path = EdgePath(value=end_path_id, match_by="id")
+                edges.append(
+                    Edge(
+                        kind="K8sAttaches",
+                        start=start_path,
+                        end=end_path,
+                        properties={"name": volume.name, "type": "HostPath"},
+                    )
+                )
         return edges
 
     @property

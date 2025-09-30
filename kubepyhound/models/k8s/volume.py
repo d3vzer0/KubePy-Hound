@@ -7,6 +7,7 @@ from kubepyhound.models import lookups
 class Volume(BaseModel):
     node_name: str
     path: str
+    # cluster: str
 
     @computed_field
     @property
@@ -28,8 +29,18 @@ class VolumeNode(Node):
     properties: ExtendedProperties
 
     @property
+    def _node_edge(self):
+        start_path = EdgePath(value=self.id, match_by="id")
+        end_path_id = get_guid(
+            self.properties.node_name, NodeTypes.K8sNode, self._cluster
+        )
+        end_path = EdgePath(value=end_path_id, match_by="id")
+        edge = Edge(kind="K8sHostedOn", start=start_path, end=end_path)
+        return edge
+
+    @property
     def edges(self):
-        return []
+        return [self._node_edge]
 
     @classmethod
     def from_input(cls, **kwargs) -> "VolumeNode":
