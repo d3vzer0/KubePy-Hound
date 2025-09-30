@@ -1,4 +1,4 @@
-from kubepyhound.models.graph import GraphEntries, Node as GraphNode, MetaData, Graph
+from kubepyhound.models.graph import GraphEntries, MetaData, Graph
 from kubepyhound.models.entries import Node as GraphNode
 from kubepyhound.models.icons import CustomNode, CustomNodeIcon, CustomNodeType
 from kubepyhound.models.k8s.cluster import ClusterNode
@@ -97,9 +97,13 @@ class ResourceGraph:
         self.cluster = cluster
 
         self.lookup = lookup
+        self._graph: Graph | None = None
 
     @property
     def graph(self) -> Graph:
+        if self._graph is not None:
+            return self._graph
+
         graph_entries = GraphEntries()
         with Progress() as progress:
             task = progress.add_task(
@@ -113,20 +117,18 @@ class ResourceGraph:
                 graph_entries.nodes.append(node)
                 for edge in node.edges:
                     graph_entries.edges.append(edge)
-                progress.update(task)
                 progress.advance(task)
-        return Graph(graph=graph_entries)
+
+        self._graph = Graph(graph=graph_entries)
+        return self._graph
 
     def to_file(self, output_path: Path) -> None:
         with open(output_path, "w") as outputfile:
-            # try:
             outputfile.write(
                 self.graph.model_dump_json(
                     exclude_unset=False, indent=2, exclude_none=True
                 )
             )
-            # except Exception as e:
-            #     print(e)
 
     def to_bloodhound(self, session: BloodHound, ctx: SyncOptions) -> None:
         if not ctx.job_id:
@@ -145,21 +147,22 @@ def process_resources(
     model_class: Type[T],
     options: ConvertOptions | SyncOptions,
 ):
+    if not resource_files:
+        return None
+
     graph = ResourceGraph(
         files=resource_files,
         model_class=model_class,
         lookup=options.lookup,
         cluster=options.cluster,
     )
-    if len(resource_files) > 0:
+    # TODO: This can probably be done more... more pythonic
+    if isinstance(options, ConvertOptions):
+        output_file = options.output / f"{model_class.__name__.lower()}.json"
+        graph.to_file(output_file)
 
-        # TODO: This can probably be done more... more pythonic
-        if isinstance(options, ConvertOptions):
-            output_file = options.output / f"{model_class.__name__.lower()}.json"
-            graph.to_file(output_file)
-
-        if isinstance(options, SyncOptions):
-            graph.to_bloodhound(options.session, options)
+    if isinstance(options, SyncOptions):
+        graph.to_bloodhound(options.session, options)
 
 
 @sync_app.callback()
@@ -232,21 +235,21 @@ def convert_callback(
 @convert_app.command()
 def cluster(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/cluster/*.json", recursive=True)
-    return process_resources(resource_files, ClusterNode, ctx.obj)
+    process_resources(resource_files, ClusterNode, ctx.obj)
 
 
 @sync_app.command()
 @convert_app.command()
 def namespaces(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/namespaces/*.json", recursive=True)
-    return process_resources(resource_files, NamespaceNode, ctx.obj)
+    process_resources(resource_files, NamespaceNode, ctx.obj)
 
 
 @sync_app.command()
 @convert_app.command()
 def nodes(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/nodes/*.json", recursive=True)
-    return process_resources(resource_files, NodeOutput, ctx.obj)
+    process_resources(resource_files, NodeOutput, ctx.obj)
 
 
 @sync_app.command()
@@ -255,7 +258,7 @@ def pods(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/pods/*.json", recursive=True
     )
-    return process_resources(resource_files, PodNode, ctx.obj)
+    process_resources(resource_files, PodNode, ctx.obj)
 
 
 @sync_app.command()
@@ -264,7 +267,7 @@ def roles(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/roles/*.json", recursive=True
     )
-    return process_resources(resource_files, RoleNode, ctx.obj)
+    process_resources(resource_files, RoleNode, ctx.obj)
 
 
 @sync_app.command()
@@ -275,14 +278,14 @@ def role_bindings(ctx: typer.Context):
         f"{ctx.obj.input}/namespaces/**/role_bindings/*.json",
         recursive=True,
     )
-    return process_resources(resource_files, RoleBindingNode, ctx.obj)
+    process_resources(resource_files, RoleBindingNode, ctx.obj)
 
 
 @sync_app.command()
 @convert_app.command()
 def cluster_roles(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/cluster_roles/*.json", recursive=True)
-    return process_resources(resource_files, ClusterRoleNode, ctx.obj)
+    process_resources(resource_files, ClusterRoleNode, ctx.obj)
 
 
 @sync_app.command()
@@ -292,7 +295,7 @@ def cluster_role_bindings(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/cluster_role_bindings/*.json", recursive=True
     )
-    return process_resources(resource_files, ClusterRoleBindingNode, ctx.obj)
+    process_resources(resource_files, ClusterRoleBindingNode, ctx.obj)
 
 
 @sync_app.command()
@@ -301,14 +304,14 @@ def stale(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/stale_objects/**/*.json", recursive=True
     )
-    return process_resources(resource_files, StaleNode, ctx.obj)
+    process_resources(resource_files, StaleNode, ctx.obj)
 
 
 @sync_app.command()
 @convert_app.command()
 def resource_groups(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/api_groups/**/*.json", recursive=True)
-    return process_resources(resource_files, ResourceGroupNode, ctx.obj)
+    process_resources(resource_files, ResourceGroupNode, ctx.obj)
 
 
 @sync_app.command()
@@ -318,7 +321,7 @@ def custom_resource_definitions(ctx: typer.Context):
         f"{ctx.obj.input}/custom_resource_definitions/**/*.json",
         recursive=True,
     )
-    return process_resources(resource_files, CustomResourceNode, ctx.obj)
+    process_resources(resource_files, CustomResourceNode, ctx.obj)
 
 
 @sync_app.command()
@@ -327,7 +330,7 @@ def resource_definitions(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/resource_definitions/**/*.json", recursive=True
     )
-    return process_resources(resource_files, ResourceNode, ctx.obj)
+    process_resources(resource_files, ResourceNode, ctx.obj)
 
 
 @sync_app.command()
@@ -337,21 +340,21 @@ def service_accounts(ctx: typer.Context):
         f"{ctx.obj.input}/namespaces/**/serviceaccounts/*.json",
         recursive=True,
     )
-    return process_resources(resource_files, ServiceAccountNode, ctx.obj)
+    process_resources(resource_files, ServiceAccountNode, ctx.obj)
 
 
 @sync_app.command()
 @convert_app.command()
 def groups(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/group/*.json", recursive=True)
-    return process_resources(resource_files, GroupNode, ctx.obj)
+    process_resources(resource_files, GroupNode, ctx.obj)
 
 
 @sync_app.command()
 @convert_app.command()
 def users(ctx: typer.Context):
     resource_files = glob.glob(f"{ctx.obj.input}/user/*.json", recursive=True)
-    return process_resources(resource_files, UserNode, ctx.obj)
+    process_resources(resource_files, UserNode, ctx.obj)
 
 
 @sync_app.command()
@@ -360,7 +363,7 @@ def statefulsets(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/statefulsets/*.json", recursive=True
     )
-    return process_resources(resource_files, StatefulSetNode, ctx.obj)
+    process_resources(resource_files, StatefulSetNode, ctx.obj)
 
 
 @sync_app.command()
@@ -369,7 +372,7 @@ def deployments(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/deployments/*.json", recursive=True
     )
-    return process_resources(resource_files, DeploymentNode, ctx.obj)
+    process_resources(resource_files, DeploymentNode, ctx.obj)
 
 
 @sync_app.command()
@@ -378,7 +381,7 @@ def replicasets(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/replicasets/*.json", recursive=True
     )
-    return process_resources(resource_files, ReplicaSetNode, ctx.obj)
+    process_resources(resource_files, ReplicaSetNode, ctx.obj)
 
 
 @sync_app.command()
@@ -387,7 +390,7 @@ def daemonsets(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/daemonsets/*.json", recursive=True
     )
-    return process_resources(resource_files, DaemonSetNode, ctx.obj)
+    process_resources(resource_files, DaemonSetNode, ctx.obj)
 
 
 @sync_app.command()
@@ -396,7 +399,7 @@ def eks(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/identities/aws/**/*.json", recursive=True
     )
-    return process_resources(resource_files, IAMUserNode, ctx.obj)
+    process_resources(resource_files, IAMUserNode, ctx.obj)
 
 
 @sync_app.command()
@@ -405,7 +408,7 @@ def dynamic(ctx: typer.Context):
     resource_files = glob.glob(
         f"{ctx.obj.input}/namespaces/**/dynamic/*.json", recursive=True
     )
-    return process_resources(resource_files, DynamicNode, ctx.obj)
+    process_resources(resource_files, DynamicNode, ctx.obj)
 
 
 @sync_app.command()
@@ -415,11 +418,10 @@ def generic(ctx: typer.Context):
         f"{ctx.obj.input}/namespaces/*/unmapped/**/*.json", recursive=True
     )
     resource_files += glob.glob(f"{ctx.obj.input}/unmapped/**/*.json", recursive=True)
-    return process_resources(resource_files, GenericNode, ctx.obj)
+    process_resources(resource_files, GenericNode, ctx.obj)
 
 
 @sync_app.command()
-@convert_app.command()
 def icons(ctx: typer.Context):
     for node_name, icon_name in KUBE_ICONS.items():
         if node_name.startswith("AWS"):
@@ -465,4 +467,4 @@ def all(ctx: typer.Context):
     #     f"[green]Converting resources to OpenGraph", total=len(sync_functions)
     # )
     for _, func in sync_functions:
-        ctx.invoke(func, ctx)
+        ctx.invoke(func)
